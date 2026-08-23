@@ -1,0 +1,35 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { TruckIcon, SparklesIcon, PhoneIcon } from 'lucide-react';
+
+const messages = [
+{ icon: TruckIcon, text: 'Free delivery on orders over ৳5,000' },
+{ icon: SparklesIcon, text: 'Monsoon collection — up to 20% off' },
+{ icon: PhoneIcon, text: 'Styling help: +880 1712 004 118' }];
+
+
+export function AnnouncementBar() {
+  return (
+    <div className="bg-ink text-cream">
+      <div className="mx-auto flex h-10 max-w-shell items-center justify-between px-5 lg:px-8">
+        <ul className="flex items-center gap-8">
+          {messages.map(({ icon: Icon, text }, index) =>
+          <li
+            key={text}
+            className={index > 0 ? 'hidden items-center gap-2 md:flex' : 'flex items-center gap-2'}>
+            
+              <Icon className="h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
+              <span className="text-[11px] tracking-wide text-cream/90">{text}</span>
+            </li>
+          )}
+        </ul>
+        <Link
+          to="/shop"
+          className="hidden text-[11px] uppercase tracking-widest text-cream/80 transition-colors duration-200 ease-soft hover:text-gold sm:block">
+          
+          Shop the collection
+        </Link>
+      </div>
+    </div>);
+
+}
