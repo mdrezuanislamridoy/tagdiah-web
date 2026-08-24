@@ -20,6 +20,26 @@ import { ShippingReturns } from './pages/ShippingReturns';
 import { Auth } from './pages/Auth';
 import { AdminLogin } from './pages/AdminLogin';
 
+/* Admin imports */
+import { AdminGuard } from './components/auth/AdminGuard';
+import { ToastProvider } from './admin/components/ui/Toast';
+import { AdminLayout } from './admin/components/layout/AdminLayout';
+import { Dashboard } from './admin/pages/Dashboard';
+import { Products } from './admin/pages/Products';
+import { ProductForm } from './admin/pages/ProductForm';
+import { Categories } from './admin/pages/Categories';
+import { Orders } from './admin/pages/Orders';
+import { OrderDetail } from './admin/pages/OrderDetail';
+import { Customers } from './admin/pages/Customers';
+import { CustomerDetail } from './admin/pages/CustomerDetail';
+import { UserManagement } from './admin/pages/UserManagement';
+import { Reviews } from './admin/pages/Reviews';
+import { Coupons } from './admin/pages/Coupons';
+import { Banners } from './admin/pages/Banners';
+import { Inventory } from './admin/pages/Inventory';
+import { Analytics } from './admin/pages/Analytics';
+import { Settings } from './admin/pages/Settings';
+
 export function App() {
   return (
     <BrowserRouter>
@@ -31,6 +51,38 @@ export function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/admin/login" element={<AdminLogin />} />
 
+              {/* Protected Admin Portal */}
+              <Route
+                path="/admin"
+                element={
+                  <AdminGuard>
+                    <ToastProvider>
+                      <AdminLayout />
+                    </ToastProvider>
+                  </AdminGuard>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="products" element={<Products />} />
+                <Route path="products/new" element={<ProductForm mode="create" />} />
+                <Route path="products/:id/edit" element={<ProductForm mode="edit" />} />
+                <Route path="categories" element={<Categories />} />
+                <Route path="orders" element={<Orders />} />
+                <Route path="orders/:id" element={<OrderDetail />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="user-management" element={<Navigate to="/admin/users" replace />} />
+                <Route path="customers" element={<Customers />} />
+                <Route path="customers/:id" element={<CustomerDetail />} />
+                <Route path="reviews" element={<Reviews />} />
+                <Route path="coupons" element={<Coupons />} />
+                <Route path="banners" element={<Banners />} />
+                <Route path="inventory" element={<Inventory />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Route>
+
+              {/* Storefront Layout */}
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/shop" element={<Shop />} />
@@ -53,5 +105,6 @@ export function App() {
           </QuickViewProvider>
         </StoreProvider>
       </AuthProvider>
-    </BrowserRouter>);
+    </BrowserRouter>
+  );
 }

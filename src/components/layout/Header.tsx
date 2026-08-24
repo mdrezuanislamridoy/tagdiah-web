@@ -56,7 +56,6 @@ export function Header() {
 
   const handleLogout = () => {
     logout();
-    setUserMenuOpen(false);
     navigate('/');
   };
 
@@ -113,6 +112,15 @@ export function Header() {
           {/* ── Auth: direct buttons, no dropdown ── */}
           {isAuthenticated ? (
             <>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="hidden items-center gap-1.5 border border-gold/40 bg-gold/10 px-2.5 py-1.5 text-[10px] uppercase tracking-widest text-gold transition-colors duration-200 ease-soft hover:bg-gold hover:text-ink sm:inline-flex"
+                >
+                  <ShieldIcon className="h-3 w-3" strokeWidth={1.5} />
+                  Admin
+                </Link>
+              )}
               <Link
                 to="/account"
                 className={cx(iconButton, 'hidden sm:flex')}
@@ -243,10 +251,14 @@ export function Header() {
                   <p className="text-sm text-smoke">Welcome back,</p>
                   <p className="mt-0.5 font-display text-lg text-ink">{user.name}</p>
                   {isAdmin && (
-                    <span className="mt-1.5 inline-flex items-center gap-1.5 bg-gold/15 px-2 py-0.5 text-[10px] uppercase tracking-widest text-gold">
+                    <Link
+                      to="/admin"
+                      onClick={() => setMenuOpen(false)}
+                      className="mt-2.5 inline-flex items-center gap-1.5 bg-gold/15 px-2.5 py-1 text-[10px] uppercase tracking-widest text-gold hover:bg-gold hover:text-ink transition-colors"
+                    >
                       <ShieldIcon className="h-3 w-3" strokeWidth={1.5} />
-                      Admin
-                    </span>
+                      Admin Dashboard →
+                    </Link>
                   )}
                 </div>
               )}

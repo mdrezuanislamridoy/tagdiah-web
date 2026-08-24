@@ -24,7 +24,7 @@ export function AdminLogin() {
 
   /* redirect if already logged in as admin */
   if (isAuthenticated && isAdmin) {
-    navigate('/', { replace: true });
+    navigate('/admin', { replace: true });
     return null;
   }
 
@@ -38,7 +38,7 @@ export function AdminLogin() {
       setIsSubmitting(false);
 
       if (result.success) {
-        navigate('/', { replace: true });
+        navigate('/admin', { replace: true });
       } else {
         setError(result.error || 'Login failed.');
       }
