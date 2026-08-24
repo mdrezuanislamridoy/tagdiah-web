@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { HeartIcon, MapPinIcon, PackageIcon, UserIcon } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
+import { HeartIcon, MapPinIcon, PackageIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
-import { orders, customer } from '../data/orders';
+import { orders } from '../data/orders';
 import { productById } from '../data/products';
 import { cx, formatPrice } from '../utils/format';
+import { useAuth } from '../contexts/AuthContext';
 
 const statusStyles: Record<string, string> = {
   Delivered: 'bg-linen text-bark',
@@ -17,13 +18,19 @@ const statusStyles: Record<string, string> = {
 const tabs = ['Orders', 'Details', 'Addresses'] as const;
 
 export function Account() {
+  const { user, isAuthenticated, logout, updateProfile } = useAuth();
   const [tab, setTab] = useState<(typeof tabs)[number]>('Orders');
+
+  /* redirect to auth if not logged in */
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
     <>
       <PageHeader
-        eyebrow={`Customer since ${customer.since}`}
-        title={`Hello, ${customer.name.split(' ')[0]}`}
+        eyebrow={`Customer since ${user.since}`}
+        title={`Hello, ${user.name.split(' ')[0]}`}
         intro="Track deliveries, revisit past orders and keep your details up to date."
         crumbs={[{ label: 'My account' }]}>
         
@@ -35,6 +42,14 @@ export function Account() {
             <HeartIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
             Wishlist
           </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2 border border-clay/25 px-5 py-3 text-[11px] uppercase tracking-widest text-clay transition-colors duration-200 ease-soft hover:border-clay hover:bg-clay hover:text-cream">
+            
+            <LogOutIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
+            Sign Out
+          </button>
         </div>
       </PageHeader>
 
@@ -132,10 +147,10 @@ export function Account() {
                 </div>
                 <dl className="mt-7 space-y-5 text-sm">
                   {[
-                { label: 'Name', value: customer.name },
-                { label: 'Email', value: customer.email },
-                { label: 'Phone', value: customer.phone },
-                { label: 'Member since', value: customer.since }].
+                { label: 'Name', value: user.name },
+                { label: 'Email', value: user.email },
+                { label: 'Phone', value: user.phone || '—' },
+                { label: 'Member since', value: user.since }].
                 map((row) =>
                 <div key={row.label} className="flex justify-between border-b border-sand pb-4">
                       <dt className="text-smoke">{row.label}</dt>
@@ -156,8 +171,8 @@ export function Account() {
                     <MapPinIcon className="h-4 w-4" strokeWidth={1.5} />
                     <span className="eyebrow">Default — Home</span>
                   </div>
-                  <p className="mt-5 text-sm leading-relaxed text-ink">{customer.address}</p>
-                  <p className="mt-3 text-sm text-smoke">{customer.phone}</p>
+                  <p className="mt-5 text-sm leading-relaxed text-ink">{user.address || 'No address saved'}</p>
+                  <p className="mt-3 text-sm text-smoke">{user.phone || '—'}</p>
                   <div className="mt-7 flex gap-4 text-[11px] uppercase tracking-widest">
                     <button type="button" className="text-ink underline underline-offset-4 hover:text-clay">
                       Edit

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { CreditCardIcon, LockIcon, Loader2Icon, SmartphoneIcon, WalletIcon } from 'lucide-react';
 import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { Field, TextArea } from '../components/ui/Field';
 import { Button } from '../components/ui/Button';
 import { useStore } from '../contexts/StoreContext';
+import { useAuth } from '../contexts/AuthContext';
 import { productById } from '../data/products';
 import { cx, formatPrice } from '../utils/format';
 
@@ -16,10 +17,16 @@ const payments = [
 
 export function Checkout() {
   const { cart, totals, clearCart } = useStore();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [payment, setPayment] = useState('bkash');
   const [delivery, setDelivery] = useState('standard');
   const [submitting, setSubmitting] = useState(false);
+
+  /* require login to checkout */
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

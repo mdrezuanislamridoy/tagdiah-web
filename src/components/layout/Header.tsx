@@ -6,22 +6,26 @@ import {
   MenuIcon,
   SearchIcon,
   ShoppingBagIcon,
-  UserIcon,
-  XIcon } from
+  XIcon,
+  LogOutIcon,
+  LogInIcon,
+  ShieldIcon } from
 'lucide-react';
 import { useStore } from '../../contexts/StoreContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { categories } from '../../data/categories';
 import { cx } from '../../utils/format';
 
 const navLinks = [
-{ label: 'Shop All', to: '/shop' },
-...categories.slice(0, 4).map((c) => ({ label: c.name, to: `/shop/${c.slug}` })),
+{ label: 'Shop', to: '/shop' },
+...categories.slice(0, 2).map((c) => ({ label: c.name, to: `/shop/${c.slug}` })),
 { label: 'New Arrivals', to: '/shop/new-arrivals' },
 { label: 'About', to: '/about' }];
 
 
 export function Header() {
   const { cartCount, wishlist } = useStore();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -49,6 +53,12 @@ export function Header() {
 
   const iconButton =
   'relative flex h-10 w-10 items-center justify-center text-ink transition-colors duration-200 ease-soft hover:text-clay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink';
+
+  const handleLogout = () => {
+    logout();
+    setUserMenuOpen(false);
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-sand bg-cream/95 backdrop-blur">
@@ -99,9 +109,38 @@ export function Header() {
             
             <SearchIcon className="h-5 w-5" strokeWidth={1.5} />
           </button>
-          <Link to="/account" className={cx(iconButton, 'hidden sm:flex')} aria-label="Your account">
-            <UserIcon className="h-5 w-5" strokeWidth={1.5} />
-          </Link>
+
+          {/* ── Auth: direct buttons, no dropdown ── */}
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/account"
+                className={cx(iconButton, 'hidden sm:flex')}
+                aria-label="My account"
+              >
+                <span className="flex h-7 w-7 items-center justify-center bg-ink text-[10px] font-medium uppercase text-cream">
+                  {user?.name?.charAt(0) || 'U'}
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={cx(iconButton, 'hidden sm:flex')}
+                aria-label="Sign out"
+              >
+                <LogOutIcon className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="ml-1 hidden items-center gap-1.5 border border-ink/25 px-4 py-2 text-[11px] uppercase tracking-widest text-ink transition-colors duration-200 ease-soft hover:border-ink hover:bg-ink hover:text-cream sm:inline-flex"
+            >
+              <LogInIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Sign In
+            </Link>
+          )}
+
           <Link to="/wishlist" className={iconButton} aria-label={`Wishlist, ${wishlist.length} items`}>
             <HeartIcon className="h-5 w-5" strokeWidth={1.5} />
             {wishlist.length > 0 && <Count value={wishlist.length} />}
@@ -133,7 +172,7 @@ export function Header() {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Try “linen porda” or “brass mirror”"
+                placeholder={`Try \u201clinen porda\u201d or \u201cbrass mirror\u201d`}
                 className="w-full bg-transparent font-display text-2xl font-light text-ink placeholder:text-dune focus:outline-none" />
               
                 <button
@@ -197,6 +236,21 @@ export function Header() {
                   <XIcon className="h-5 w-5" strokeWidth={1.5} />
                 </button>
               </div>
+
+              {/* logged-in user greeting */}
+              {isAuthenticated && user && (
+                <div className="mt-6 border-b border-sand pb-4">
+                  <p className="text-sm text-smoke">Welcome back,</p>
+                  <p className="mt-0.5 font-display text-lg text-ink">{user.name}</p>
+                  {isAdmin && (
+                    <span className="mt-1.5 inline-flex items-center gap-1.5 bg-gold/15 px-2 py-0.5 text-[10px] uppercase tracking-widest text-gold">
+                      <ShieldIcon className="h-3 w-3" strokeWidth={1.5} />
+                      Admin
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="mt-8 flex flex-col">
                 {navLinks.map((link) =>
               <Link
@@ -210,15 +264,38 @@ export function Header() {
               )}
               </div>
               <div className="mt-auto flex flex-col gap-3 pt-8 text-sm text-smoke">
-                <Link to="/account" onClick={() => setMenuOpen(false)}>
-                  My account
-                </Link>
-                <Link to="/contact" onClick={() => setMenuOpen(false)}>
-                  Contact us
-                </Link>
-                <Link to="/faq" onClick={() => setMenuOpen(false)}>
-                  Help &amp; FAQ
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <Link to="/account" onClick={() => setMenuOpen(false)}>
+                      My account
+                    </Link>
+                    <Link to="/contact" onClick={() => setMenuOpen(false)}>
+                      Contact us
+                    </Link>
+                    <Link to="/faq" onClick={() => setMenuOpen(false)}>
+                      Help &amp; FAQ
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); handleLogout(); }}
+                      className="text-left text-clay"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/auth" onClick={() => setMenuOpen(false)} className="text-clay font-medium">
+                      Sign In / Create Account
+                    </Link>
+                    <Link to="/contact" onClick={() => setMenuOpen(false)}>
+                      Contact us
+                    </Link>
+                    <Link to="/faq" onClick={() => setMenuOpen(false)}>
+                      Help &amp; FAQ
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.nav>
           </motion.div>

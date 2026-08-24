@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { CheckIcon, Loader2Icon } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 
 export function Newsletter() {
-  const [email, setEmail] = useState('');
+  const { user, isAuthenticated } = useAuth();
+  const [email, setEmail] = useState(user?.email || '');
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
 
   const submit = (e: React.FormEvent) => {
@@ -64,5 +66,4 @@ export function Newsletter() {
         </div>
       </div>
     </section>);
-
 }

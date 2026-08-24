@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ButtonLink } from '../ui/Button';
 import { IMAGES } from '../../data/content';
+import { useAuth } from '../../contexts/AuthContext';
 
 const rise = {
   hidden: { opacity: 0, y: 16 },
@@ -13,6 +14,8 @@ const rise = {
 };
 
 export function Hero() {
+  const { user, isAuthenticated } = useAuth();
+
   return (
     <section className="relative isolate">
       <div className="relative h-[78vh] min-h-[520px] w-full overflow-hidden lg:h-[86vh]">
@@ -33,7 +36,9 @@ export function Hero() {
                 animate="show"
                 className="eyebrow text-cream/90">
                 
-                Handmade in Bangladesh · Shipped worldwide
+                {isAuthenticated && user
+                  ? `Welcome back, ${user.name.split(' ')[0]} — curated just for you`
+                  : 'Handmade in Bangladesh · Shipped worldwide'}
               </motion.p>
               <motion.h1
                 custom={1}
@@ -64,9 +69,15 @@ export function Hero() {
                 <ButtonLink to="/shop" size="lg" variant="light">
                   Shop Collection
                 </ButtonLink>
-                <ButtonLink to="/shop/new-arrivals" variant="ghost" size="lg">
-                  See New Arrivals
-                </ButtonLink>
+                {isAuthenticated ? (
+                  <ButtonLink to="/account" variant="ghost" size="lg">
+                    My Account
+                  </ButtonLink>
+                ) : (
+                  <ButtonLink to="/auth" variant="ghost" size="lg">
+                    Sign In
+                  </ButtonLink>
+                )}
               </motion.div>
             </div>
           </div>
