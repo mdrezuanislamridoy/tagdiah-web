@@ -88,6 +88,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [coupon, setCoupon] = useState<string | null>(null);
+  const [couponDetails, setCouponDetails] = useState<{
+    code: string;
+    type: string;
+    amount: number;
+    label: string;
+  } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
 
   /* Sync Cart / Wishlist to LocalStorage */
@@ -288,19 +294,51 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const applyCoupon = useCallback((code: string) => {
-    const key = code.trim().toUpperCase();
-    if (COUPONS[key]) {
-      setCoupon(key);
-      setCouponError(null);
-    } else {
-      setCoupon(null);
-      setCouponError(`“${code}” isn’t a valid code. Try TAGDIAH10 or MONSOON15.`);
-    }
-  }, []);
+  const applyCoupon = useCallback(
+    async (code: string) => {
+      const key = code.trim().toUpperCase();
+      if (!key) return;
+
+      const currentSubtotal = cart.reduce((sum, line) => {
+        const product = productById(line.productId);
+        return sum + (product ? product.price * line.quantity : 0);
+      }, 0);
+
+      try {
+        const data = await api.post<any>('/coupons/validate', {
+          code: key,
+          subtotal: currentSubtotal,
+        });
+
+        if (data?.valid) {
+          setCoupon(data.code);
+          setCouponDetails(data);
+          setCouponError(null);
+        }
+      } catch (err: any) {
+        // Fallback for offline default coupon keys
+        if (COUPONS[key]) {
+          setCoupon(key);
+          setCouponDetails({
+            code: key,
+            type: 'Percentage',
+            amount: COUPONS[key].rate * 100,
+            label: COUPONS[key].label,
+          });
+          setCouponError(null);
+        } else {
+          setCoupon(null);
+          setCouponDetails(null);
+          setCouponError(err?.message || `“${code}” is not a valid coupon code.`);
+        }
+      }
+    },
+    [cart, productById]
+  );
 
   const clearCoupon = useCallback(() => {
     setCoupon(null);
+    setCouponDetails(null);
     setCouponError(null);
   }, []);
 
@@ -312,10 +350,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const product = productById(line.productId);
       return sum + (product ? product.price * line.quantity : 0);
     }, 0);
-    const discount = coupon ? Math.round(subtotal * COUPONS[coupon].rate) : 0;
-    const delivery = subtotal === 0 || subtotal - discount >= 5000 ? 0 : 120;
+
+    let discount = 0;
+    if (couponDetails) {
+      if (couponDetails.type === 'Percentage') {
+        discount = Math.round((subtotal * couponDetails.amount) / 100);
+      } else if (couponDetails.type === 'Fixed') {
+        discount = Math.min(subtotal, couponDetails.amount);
+      }
+    } else if (coupon && COUPONS[coupon]) {
+      discount = Math.round(subtotal * COUPONS[coupon].rate);
+    }
+
+    let delivery = subtotal === 0 || subtotal - discount >= 5000 ? 0 : 120;
+    if (couponDetails?.type === 'Free Delivery') {
+      delivery = 0;
+    }
+
     return { subtotal, discount, delivery, total: subtotal - discount + delivery };
-  }, [cart, coupon, productById]);
+  }, [cart, coupon, couponDetails, productById]);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -328,7 +381,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       cartCount: cart.reduce((n, l) => n + l.quantity, 0),
       wishlistCount: wishlist.length,
       coupon,
-      couponLabel: coupon ? COUPONS[coupon].label : null,
+      couponLabel: couponDetails?.label || (coupon ? COUPONS[coupon]?.label : null),
       couponError,
       totals,
       productById,
