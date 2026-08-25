@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBagIcon, EyeIcon, DownloadIcon, ArrowUpDownIcon, PrinterIcon } from 'lucide-react';
 import { Card, PageHeader } from '../components/ui/Card';
@@ -7,8 +7,10 @@ import { SearchInput, Select } from '../components/ui/Fields';
 import { StatusPill } from '../components/ui/StatusPill';
 import { EmptyState, Pagination, TableShell, Td, Th, Tr } from '../components/ui/Table';
 import { useToast } from '../components/ui/Toast';
-import { orders, orderStatuses } from '../data/orders';
+import { orders as initialOrders, orderStatuses } from '../data/orders';
 import { bdt, shortDate, classNames } from '../utils/format';
+import { api } from '../../utils/api';
+import type { Order } from '../types';
 
 const PER_PAGE = 8;
 
@@ -16,40 +18,86 @@ const tabs = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled
 
 export function Orders() {
   const toast = useToast();
+  const [orderList, setOrderList] = useState<Order[]>(initialOrders);
   const [tab, setTab] = useState<(typeof tabs)[number]>('All');
   const [query, setQuery] = useState('');
   const [payment, setPayment] = useState('All payments');
   const [sort, setSort] = useState('Newest first');
   const [page, setPage] = useState(1);
 
+  /* Load real orders from backend */
+  useEffect(() => {
+    api
+      .get<any[]>('/orders')
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Order[] = data.map((o) => ({
+            id: o.orderNumber || o.id,
+            customerId: o.customerId || 'c-01',
+            customer: o.customerName,
+            email: o.email,
+            phone: o.phone,
+            address: o.address,
+            city: o.city,
+            date: o.createdAt.split('T')[0],
+            items: o.items.map((i: any) => ({
+              productId: i.productId || 'p-01',
+              name: i.name,
+              image: i.image || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38',
+              variant: i.variant || 'Default',
+              qty: i.qty,
+              price: i.price,
+            })),
+            subtotal: o.subtotal,
+            delivery: o.delivery,
+            discount: o.discount,
+            total: o.total,
+            payment: o.payment === 'Paid' ? 'Paid' : 'COD',
+            method: o.method || 'COD',
+            status: o.status,
+            courier: o.courier || 'Pathao Courier',
+            tracking: o.tracking || 'PT-Pending',
+            timeline: [
+              { label: 'Order placed', at: o.createdAt.split('T')[0], note: 'Online checkout (COD)', done: true },
+              { label: 'Confirmed', at: o.createdAt.split('T')[0], note: 'Studio team', done: o.status !== 'Pending' },
+            ],
+          }));
+          setOrderList(mapped);
+        }
+      })
+      .catch(() => {
+        // Fallback to initial dummy orders
+      });
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = orders.filter((o) => {
+    const list = orderList.filter((o) => {
       const matchTab = tab === 'All' || o.status === tab;
       const matchQ = !q || o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q) || o.phone.includes(q);
       const matchP = payment === 'All payments' || o.payment === payment;
       return matchTab && matchQ && matchP;
     });
     return [...list].sort((a, b) =>
-    sort === 'Newest first' ?
-    b.date.localeCompare(a.date) :
-    sort === 'Oldest first' ?
-    a.date.localeCompare(b.date) :
-    b.total - a.total
+      sort === 'Newest first'
+        ? b.date.localeCompare(a.date)
+        : sort === 'Oldest first'
+        ? a.date.localeCompare(b.date)
+        : b.total - a.total
     );
-  }, [tab, query, payment, sort]);
+  }, [orderList, tab, query, payment, sort]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const view = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const counts = orderStatuses.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = orders.filter((o) => o.status === s).length;
+    acc[s] = orderList.filter((o) => o.status === s).length;
     return acc;
   }, {});
 
   return (
     <>
-      <PageHeader title="Orders" subtitle={`${orders.length} orders · ${counts.Pending ?? 0} awaiting confirmation`}>
+      <PageHeader title="Orders" subtitle={`${orderList.length} orders · ${counts.Pending ?? 0} awaiting confirmation`}>
         <Button variant="secondary" icon={PrinterIcon} onClick={() => toast('info', 'Preparing labels', 'Shipping labels for today’s orders are being generated.')}>
           Print labels
         </Button>

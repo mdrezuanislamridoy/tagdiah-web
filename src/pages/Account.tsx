@@ -18,17 +18,21 @@ import {
   SparklesIcon,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Button } from '../components/ui/Button';
-import { orders } from '../data/orders';
+import { orders as initialOrders } from '../data/orders';
 import { productById } from '../data/products';
 import { cx, formatPrice } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
+import { api } from '../utils/api';
+import type { Order } from '../types';
 
 const statusStyles: Record<string, string> = {
   Delivered: 'bg-sage/15 text-sage border border-sage/30',
   'In transit': 'bg-gold/15 text-gold border border-gold/30',
+  Shipped: 'bg-gold/15 text-gold border border-gold/30',
   Processing: 'bg-sand text-ink border border-dune',
+  Confirmed: 'bg-sand text-ink border border-dune',
+  Pending: 'bg-linen text-bark border border-sand',
   Cancelled: 'bg-clay/15 text-clay border border-clay/30',
 };
 
@@ -41,6 +45,45 @@ export function Account() {
   const { wishlist } = useStore();
   const [tab, setTab] = useState<TabType>('Dashboard');
   const [orderFilter, setOrderFilter] = useState<string>('All');
+  const [orderList, setOrderList] = useState<Order[]>(initialOrders);
+
+  /* Load real orders from backend */
+  useEffect(() => {
+    api
+      .get<any[]>('/orders/my-orders')
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Order[] = data.map((o) => ({
+            id: o.orderNumber || o.id,
+            date: new Date(o.createdAt).toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
+            status: o.status,
+            items: o.items.map((i: any) => ({
+              productId: i.productId || 'p-01',
+              quantity: i.qty,
+              color: i.color || i.variant || 'Standard',
+            })),
+            totals: {
+              subtotal: o.subtotal,
+              discount: o.discount,
+              delivery: o.delivery,
+              total: o.total,
+            },
+            address: `${o.address}, ${o.city}`,
+            payment: o.method === 'COD' ? 'Cash on Delivery (COD)' : o.payment,
+            courier: o.courier || 'Pathao Courier',
+            tracking: o.tracking || 'PT-Pending',
+          }));
+          setOrderList(mapped);
+        }
+      })
+      .catch(() => {
+        // Fallback to initial orders
+      });
+  }, []);
 
   /* Edit state */
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -59,13 +102,13 @@ export function Account() {
   }
 
   const activeShipment = useMemo(() => {
-    return orders.find((o) => o.status === 'In transit' || o.status === 'Processing');
-  }, []);
+    return orderList.find((o) => o.status === 'In transit' || o.status === 'Processing' || o.status === 'Confirmed' || o.status === 'Shipped');
+  }, [orderList]);
 
   const filteredOrders = useMemo(() => {
-    if (orderFilter === 'All') return orders;
-    return orders.filter((o) => o.status === orderFilter);
-  }, [orderFilter]);
+    if (orderFilter === 'All') return orderList;
+    return orderList.filter((o) => o.status === orderFilter);
+  }, [orderList, orderFilter]);
 
   const handleSaveDetails = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,14 +205,14 @@ export function Account() {
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div className="border border-sand bg-warmwhite p-5">
                     <span className="eyebrow text-smoke block">Total Orders</span>
-                    <span className="mt-2 font-display text-3xl font-light text-ink">{orders.length}</span>
+                    <span className="mt-2 font-display text-3xl font-light text-ink">{orderList.length}</span>
                     <span className="mt-1 block text-xs text-smoke">Lifetime placed</span>
                   </div>
 
                   <div className="border border-sand bg-warmwhite p-5">
                     <span className="eyebrow text-smoke block">In Transit</span>
                     <span className="mt-2 font-display text-3xl font-light text-gold">
-                      {orders.filter((o) => o.status === 'In transit').length}
+                      {orderList.filter((o) => o.status === 'In transit' || o.status === 'Shipped').length}
                     </span>
                     <span className="mt-1 block text-xs text-smoke">Active package</span>
                   </div>
@@ -262,12 +305,12 @@ export function Account() {
                       onClick={() => setTab('Orders & Tracking')}
                       className="text-[11px] uppercase tracking-widest text-ink hover:text-clay underline underline-offset-4"
                     >
-                      View all ({orders.length})
+                      View all ({orderList.length})
                     </button>
                   </div>
 
                   <ul className="divide-y divide-sand mt-4">
-                    {orders.slice(0, 2).map((order) => (
+                    {orderList.slice(0, 2).map((order) => (
                       <li key={order.id} className="py-4 first:pt-2 last:pb-0 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="flex h-12 w-12 items-center justify-center border border-sand bg-cream">
