@@ -1,17 +1,12 @@
-export type CategorySlug =
-'wall-decor' |
-'door-porda' |
-'home-accessories' |
-'decorative-arts' |
-'new-arrivals';
+export type CategorySlug = string;
 
 export interface Category {
   slug: CategorySlug;
   name: string;
-  tagline: string;
-  description: string;
+  tagline?: string;
+  description?: string;
   image: string;
-  count: number;
+  count?: number;
 }
 
 export interface ProductSpec {
@@ -22,12 +17,12 @@ export interface ProductSpec {
 export interface Review {
   id: string;
   author: string;
-  location: string;
+  location?: string;
   rating: number;
-  date: string;
-  title: string;
+  date?: string;
+  title?: string;
   body: string;
-  verified: boolean;
+  verified?: boolean;
 }
 
 export interface Product {
@@ -37,6 +32,7 @@ export interface Product {
   category: CategorySlug;
   price: number;
   compareAt?: number;
+  discountPrice?: number;
   rating: number;
   reviewCount: number;
   images: string[];
@@ -45,9 +41,10 @@ export interface Product {
   materials: string[];
   sizes?: string[];
   availability: 'in-stock' | 'low-stock' | 'made-to-order';
-  shortDescription: string;
-  story: string;
-  specs: ProductSpec[];
+  shortDescription?: string;
+  description?: string;
+  story?: string;
+  specs?: ProductSpec[];
   popularity: number;
   createdAt: string;
   bestSeller?: boolean;
@@ -72,8 +69,8 @@ export interface OrderSummaryTotals {
 export interface Order {
   id: string;
   date: string;
-  status: 'Delivered' | 'In transit' | 'Processing' | 'Cancelled';
-  items: {productId: string;quantity: number;color: string;}[];
+  status: 'Delivered' | 'In transit' | 'Processing' | 'Confirmed' | 'Pending' | 'Shipped' | 'Cancelled';
+  items: { productId: string; quantity: number; color: string; }[];
   totals: OrderSummaryTotals;
   address: string;
   payment: string;

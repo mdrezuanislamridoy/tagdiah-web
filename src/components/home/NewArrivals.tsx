@@ -1,10 +1,13 @@
 import React from 'react';
 import { ProductCard } from '../product/ProductCard';
 import { ButtonLink } from '../ui/Button';
-import { products } from '../../data/products';
+import { useStore } from '../../contexts/StoreContext';
 
 export function NewArrivals() {
-  const arrivals = products.filter((product) => product.newArrival).slice(0, 4);
+  const { products } = useStore();
+  const arrivals = products
+    .filter((product) => product.newArrival || product.badge === 'New Arrival')
+    .slice(0, 4);
 
   return (
     <section className="border-y border-sand bg-linen">
@@ -24,11 +27,11 @@ export function NewArrivals() {
         </div>
 
         <div className="grid grid-cols-2 gap-x-5 gap-y-12 lg:gap-x-10 lg:gap-y-14">
-          {arrivals.map((product) =>
-          <ProductCard key={product.id} product={product} />
-          )}
+          {arrivals.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
         </div>
       </div>
-    </section>);
-
+    </section>
+  );
 }

@@ -6,11 +6,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Rating } from '../components/ui/Rating';
 import { useStore } from '../contexts/StoreContext';
-import { productById } from '../data/products';
 import { availabilityLabel, formatPrice } from '../utils/format';
 
 export function Wishlist() {
-  const { wishlist, toggleWishlist, addToCart } = useStore();
+  const { wishlist, toggleWishlist, addToCart, productById } = useStore();
   const items = wishlist.map(productById).filter(Boolean);
 
   return (

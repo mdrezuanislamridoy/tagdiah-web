@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, ImagePlusIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { ArrowLeftIcon, ImagePlusIcon, PlusIcon, Trash2Icon, XIcon, Loader2Icon } from 'lucide-react';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Button, IconButton } from '../components/ui/Button';
 import { Field, Select, TextArea, TextInput, Toggle } from '../components/ui/Fields';
 import { useToast } from '../components/ui/Toast';
 import { products, emptyProduct, IMG } from '../data/products';
 import { categories, categoryNames } from '../data/categories';
+import { api } from '../../utils/api';
 import type { Product, Variation } from '../types';
 
-export function ProductForm({ mode }: {mode: 'create' | 'edit';}) {
+export function ProductForm({ mode }: { mode: 'create' | 'edit' }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -20,30 +21,94 @@ export function ProductForm({ mode }: {mode: 'create' | 'edit';}) {
     mode === 'edit' ? [source.image, IMG.macrame, IMG.vase] : []
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const set = <K extends keyof Product,>(key: K, value: Product[K]) => setForm((f) => ({ ...f, [key]: value }));
+  useEffect(() => {
+    if (mode === 'edit' && id) {
+      api
+        .get<any>(`/products/${id}`)
+        .then((data) => {
+          if (data) {
+            let images: string[] = [];
+            try {
+              images = typeof data.images === 'string' ? JSON.parse(data.images) : data.images;
+            } catch {
+              images = [data.images];
+            }
+            setForm((prev) => ({
+              ...prev,
+              id: data.id,
+              name: data.name,
+              sku: data.sku,
+              slug: data.slug,
+              description: data.description || '',
+              price: data.price,
+              compareAt: data.compareAt,
+              discountPrice: data.discountPrice,
+              stock: data.stock,
+              status: data.status,
+              category: data.category?.name || 'Curtains & Porda',
+            }));
+            if (images.length > 0) setGallery(images);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [mode, id]);
 
-  const subcategories = categories.
-  filter((c) => c.parent === form.category).
-  map((c) => c.name);
+  const set = <K extends keyof Product>(key: K, value: Product[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const subcategories = categories
+    .filter((c) => c.parent === form.category)
+    .map((c) => c.name);
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = 'Product name is required.';
     if (!form.sku.trim()) e.sku = 'SKU is required for inventory tracking.';
     if (!form.price || form.price <= 0) e.price = 'Enter a price greater than zero.';
-    if (form.discountPrice && form.discountPrice >= form.price) e.discountPrice = 'Discount price must be below the regular price.';
+    if (form.discountPrice && form.discountPrice >= form.price)
+      e.discountPrice = 'Discount price must be below the regular price.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const submit = (publish: boolean) => {
+  const submit = async (publish: boolean) => {
     if (!validate()) {
       toast('error', 'Check the highlighted fields', 'A few required details are missing.');
       return;
     }
-    toast('success', publish ? 'Product published' : 'Draft saved', `${form.name} was saved successfully.`);
-    navigate('/admin/products');
+
+    setSubmitting(true);
+    try {
+      const slug = form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const payload = {
+        name: form.name,
+        slug,
+        sku: form.sku,
+        description: form.description,
+        price: Number(form.price),
+        compareAt: form.compareAt ? Number(form.compareAt) : undefined,
+        discountPrice: form.discountPrice ? Number(form.discountPrice) : undefined,
+        stock: Number(form.stock || 0),
+        status: publish ? 'Active' : 'Draft',
+        images: JSON.stringify(gallery.length > 0 ? gallery : ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38']),
+      };
+
+      if (mode === 'create') {
+        await api.post('/products', payload);
+      } else if (id) {
+        await api.put(`/products/${id}`, payload);
+      }
+
+      toast('success', publish ? 'Product published' : 'Draft saved', `${form.name} was saved successfully.`);
+      navigate('/admin/products');
+    } catch (err: any) {
+      toast('error', 'Failed to save product', err?.message || 'Server error.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const addVariation = () => {

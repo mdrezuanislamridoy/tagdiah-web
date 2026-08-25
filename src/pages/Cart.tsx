@@ -6,12 +6,11 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { OrderSummary } from '../components/cart/OrderSummary';
 import { ProductRail } from '../components/product/ProductRail';
 import { useStore } from '../contexts/StoreContext';
-import { productById, products } from '../data/products';
 import { formatPrice } from '../utils/format';
 
 export function Cart() {
-  const { cart, savedForLater, updateQuantity, removeLine, saveForLater, moveToCart, removeSaved } =
-  useStore();
+  const { cart, savedForLater, updateQuantity, removeLine, saveForLater, moveToCart, removeSaved, productById, products } =
+    useStore();
 
   return (
     <>

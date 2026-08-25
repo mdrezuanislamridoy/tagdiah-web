@@ -2,10 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRightIcon } from 'lucide-react';
 import { SectionHeading } from '../ui/SectionHeading';
-import { categories } from '../../data/categories';
+import { useStore } from '../../contexts/StoreContext';
 import { cx } from '../../utils/format';
+import type { Category } from '../../types';
 
 export function CategoryGrid() {
+  const { categories } = useStore();
+  if (!categories || categories.length === 0) return null;
   const [feature, ...rest] = categories;
 
   return (
@@ -31,12 +34,12 @@ export function CategoryGrid() {
 function CategoryTile({
   category,
   className,
-  featured = false
-
-
-
-
-}: {category: (typeof categories)[number];className?: string;featured?: boolean;}) {
+  featured = false,
+}: {
+  category: Category;
+  className?: string;
+  featured?: boolean;
+}) {
   return (
     <Link
       to={`/shop/${category.slug}`}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StarIcon } from 'lucide-react';
-import { categories } from '../../data/categories';
+import { useStore } from '../../contexts/StoreContext';
 import { cx, formatPrice } from '../../utils/format';
 
 export interface Filters {
@@ -13,26 +13,28 @@ export interface Filters {
 }
 
 export const ALL_COLORS = [
-{ name: 'Ivory', hex: '#F4EFE7' },
-{ name: 'Oatmeal', hex: '#E3D6C2' },
-{ name: 'Sand', hex: '#D9C7A9' },
-{ name: 'Terracotta', hex: '#B15C3C' },
-{ name: 'Clay', hex: '#C06B4A' },
-{ name: 'Charcoal', hex: '#3A3532' },
-{ name: 'Antique Brass', hex: '#B08A3E' },
-{ name: 'Natural', hex: '#CDBB9C' }];
-
+  { name: 'Ivory', hex: '#F4EFE7' },
+  { name: 'Oatmeal', hex: '#E3D6C2' },
+  { name: 'Sand', hex: '#D9C7A9' },
+  { name: 'Terracotta', hex: '#B15C3C' },
+  { name: 'Clay', hex: '#C06B4A' },
+  { name: 'Charcoal', hex: '#3A3532' },
+  { name: 'Antique Brass', hex: '#B08A3E' },
+  { name: 'Natural', hex: '#CDBB9C' },
+];
 
 export const ALL_MATERIALS = [
-'Cotton',
-'Linen',
-'Brass',
-'Ceramic',
-'Terracotta',
-'Wood',
-'Seagrass',
-'Paper'];
-
+  'Cotton',
+  'Linen',
+  'Brass',
+  'Ceramic',
+  'Terracotta',
+  'Wood',
+  'Seagrass',
+  'Paper',
+  'Wild Cane',
+  'Tossa Jute',
+];
 
 export const PRICE_CEILING = 10000;
 
@@ -43,13 +45,15 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({ filters, onChange, onReset }: FilterPanelProps) {
+  const { categories } = useStore();
+
   const toggle = (key: 'categories' | 'colors' | 'materials', value: string) => {
     const current = filters[key];
     onChange({
       ...filters,
-      [key]: current.includes(value) ?
-      current.filter((item) => item !== value) :
-      [...current, value]
+      [key]: current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value],
     });
   };
 
@@ -60,26 +64,26 @@ export function FilterPanel({ filters, onChange, onReset }: FilterPanelProps) {
         <button
           type="button"
           onClick={onReset}
-          className="text-[11px] uppercase tracking-widest text-smoke underline underline-offset-4 transition-colors duration-200 ease-soft hover:text-clay">
-          
+          className="text-[11px] uppercase tracking-widest text-smoke underline underline-offset-4 transition-colors duration-200 ease-soft hover:text-clay"
+        >
           Reset
         </button>
       </div>
 
       <Group label="Category">
         <ul className="space-y-2.5">
-          {categories.
-          filter((c) => c.slug !== 'new-arrivals').
-          map((category) =>
-          <li key={category.slug}>
+          {categories
+            .filter((c) => c.slug !== 'new-arrivals')
+            .map((category) => (
+              <li key={category.slug}>
                 <Check
-              checked={filters.categories.includes(category.slug)}
-              onChange={() => toggle('categories', category.slug)}
-              label={category.name}
-              hint={`${category.count}`} />
-            
+                  checked={filters.categories.includes(category.slug)}
+                  onChange={() => toggle('categories', category.slug)}
+                  label={category.name}
+                  hint={category.count !== undefined ? `${category.count}` : undefined}
+                />
               </li>
-          )}
+            ))}
         </ul>
       </Group>
 

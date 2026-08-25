@@ -20,6 +20,7 @@ import { useToast } from '../components/ui/Toast';
 import { products as seed } from '../data/products';
 import { categoryNames } from '../data/categories';
 import { bdt, shortDate } from '../utils/format';
+import { api } from '../../utils/api';
 import type { Product } from '../types';
 
 const PER_PAGE = 8;
@@ -35,6 +36,50 @@ export function Products() {
   const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<Product | null>(null);
   const [bulkDelete, setBulkDelete] = useState(false);
+
+  /* Load real products from backend */
+  const loadProducts = () => {
+    api
+      .get<any[]>('/products')
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Product[] = data.map((p) => {
+            let images: string[] = [];
+            try {
+              images = typeof p.images === 'string' ? JSON.parse(p.images) : p.images;
+            } catch {
+              images = [p.images || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38'];
+            }
+            return {
+              id: p.id,
+              name: p.name,
+              sku: p.sku || 'TGD-PRD',
+              slug: p.slug,
+              category: p.category?.name || p.categoryId || 'Decor',
+              subcategory: 'Handcrafted',
+              price: p.price,
+              compareAt: p.compareAt,
+              discountPrice: p.discountPrice,
+              stock: p.stock ?? 15,
+              lowStockAt: p.lowStockAt ?? 5,
+              status: (p.status as any) || 'Active',
+              images,
+              updatedAt: p.updatedAt ? p.updatedAt.split('T')[0] : '2026-08-25',
+              isFeatured: p.featured || false,
+              rating: 4.9,
+              reviewsCount: p.reviews?.length || 10,
+              variationsCount: p.variations?.length || 0,
+            };
+          });
+          setItems(mapped);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -230,13 +275,19 @@ export function Products() {
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => setToDelete(null)}
-        onConfirm={() => {
-          setItems((list) => list.filter((p) => p.id !== toDelete?.id));
-          toast('success', 'Product deleted', `${toDelete?.name} was removed from the catalogue.`);
-          setToDelete(null);
+        onConfirm={async () => {
+          if (toDelete) {
+            try {
+              await api.delete(`/products/${toDelete.id}`);
+            } catch {}
+            setItems((list) => list.filter((p) => p.id !== toDelete.id));
+            toast('success', 'Product deleted', `${toDelete.name} was removed from the catalogue.`);
+            setToDelete(null);
+          }
         }}
         title="Delete this product?"
-        message={`${toDelete?.name ?? ''} will be removed from the storefront immediately. Past orders keep their record.`} />
+        message={`${toDelete?.name ?? ''} will be removed from the storefront immediately. Past orders keep their record.`}
+      />
       
 
       <ConfirmDialog

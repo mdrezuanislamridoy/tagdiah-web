@@ -17,17 +17,14 @@ import { Rating } from '../components/ui/Rating';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ProductGallery } from '../components/product/ProductGallery';
 import { ProductRail } from '../components/product/ProductRail';
-import { ReviewsSection } from '../components/product/ReviewsSection';
 import { useStore } from '../contexts/StoreContext';
-import { products, productBySlug, productsByIds } from '../data/products';
-import { categoryBySlug } from '../data/categories';
 import { availabilityLabel, cx, discountPercent, formatPrice } from '../utils/format';
 
 export function ProductDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { productBySlug, productById, products: allProducts, categoryBySlug, addToCart, toggleWishlist, isWishlisted } = useStore();
   const product = slug ? productBySlug(slug) : undefined;
-  const { addToCart, toggleWishlist, isWishlisted } = useStore();
 
   const [color, setColor] = useState(product?.colors[0] ?? '');
   const [size, setSize] = useState(product?.sizes?.[0]);
@@ -36,12 +33,20 @@ export function ProductDetail() {
 
   const related = useMemo(
     () =>
-    product ?
-    products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4) :
-    [],
-    [product]
+      product
+        ? allProducts
+            .filter((p) => p.category === product.category && p.id !== product.id)
+            .slice(0, 4)
+        : [],
+    [product, allProducts]
   );
-  const completeTheLook = productsByIds(product?.completeTheLook);
+  const completeTheLook = useMemo(
+    () =>
+      (product?.completeTheLook || [])
+        .map((id) => productById(id))
+        .filter((p): p is NonNullable<typeof p> => Boolean(p)),
+    [product, productById]
+  );
 
   if (!product) {
     return (

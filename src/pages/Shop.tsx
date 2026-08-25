@@ -8,17 +8,16 @@ import { ProductCardSkeleton } from '../components/ui/ProductCardSkeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { FilterPanel, PRICE_CEILING, type Filters } from '../components/shop/FilterPanel';
-import { products } from '../data/products';
-import { categoryBySlug } from '../data/categories';
+import { useStore } from '../contexts/StoreContext';
 import { cx } from '../utils/format';
 
 const SORTS = [
-{ value: 'popularity', label: 'Popularity' },
-{ value: 'newest', label: 'Newest' },
-{ value: 'price-asc', label: 'Price: low to high' },
-{ value: 'price-desc', label: 'Price: high to low' },
-{ value: 'rating', label: 'Top rated' }] as
-const;
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price-asc', label: 'Price: low to high' },
+  { value: 'price-desc', label: 'Price: high to low' },
+  { value: 'rating', label: 'Top rated' },
+] as const;
 
 const emptyFilters: Filters = {
   categories: [],
@@ -26,13 +25,14 @@ const emptyFilters: Filters = {
   colors: [],
   materials: [],
   inStockOnly: false,
-  minRating: 0
+  minRating: 0,
 };
 
 const PAGE_SIZE = 8;
 
 export function Shop() {
   const { category: routeCategory } = useParams();
+  const { products: storeProducts, categoryBySlug } = useStore();
   const category = routeCategory ? categoryBySlug(routeCategory) : undefined;
 
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -47,15 +47,18 @@ export function Shop() {
     setLoading(true);
     setVisible(PAGE_SIZE);
     setFilters(emptyFilters);
-    const timer = window.setTimeout(() => setLoading(false), 550);
+    const timer = window.setTimeout(() => setLoading(false), 350);
     return () => window.clearTimeout(timer);
   }, [routeCategory]);
 
   const results = useMemo(() => {
-    let list = [...products];
+    let list = [...storeProducts];
 
-    if (routeCategory === 'new-arrivals') list = list.filter((p) => p.newArrival);else
-    if (routeCategory) list = list.filter((p) => p.category === routeCategory);
+    if (routeCategory === 'new-arrivals') {
+      list = list.filter((p) => p.newArrival || p.badge === 'New Arrival');
+    } else if (routeCategory) {
+      list = list.filter((p) => p.category === routeCategory);
+    }
 
     if (filters.categories.length)
     list = list.filter((p) => filters.categories.includes(p.category));

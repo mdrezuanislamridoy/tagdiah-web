@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, PencilIcon, Trash2Icon, ChevronRightIcon, LayersIcon } from 'lucide-react';
 import { Card, PageHeader } from '../components/ui/Card';
 import { Button, IconButton } from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { ConfirmDialog, Modal } from '../components/ui/Modal';
 import { EmptyState } from '../components/ui/Table';
 import { useToast } from '../components/ui/Toast';
 import { categories as seed, categoryNames } from '../data/categories';
+import { api } from '../../utils/api';
 import type { Category } from '../types';
 
 export function Categories() {
@@ -16,53 +17,79 @@ export function Categories() {
   const [editing, setEditing] = useState<Category | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Category | null>(null);
-  const [draft, setDraft] = useState({ name: '', parent: 'None (top level)', status: 'Active', description: '' });
+  const [draft, setDraft] = useState({ name: '', slug: '', parent: 'None (top level)', status: 'Active', description: '' });
   const [error, setError] = useState('');
+
+  const loadCategories = () => {
+    api
+      .get<any[]>('/categories')
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Category[] = data.map((c) => ({
+            id: c.id,
+            slug: c.slug,
+            name: c.name,
+            image: c.image || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800',
+            parent: null,
+            products: c._count?.products || 0,
+            status: (c.status as any) || 'Active',
+            description: c.description || c.tagline || '',
+          }));
+          setItems(mapped);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   const parents = items.filter((c) => !c.parent);
 
   const openNew = () => {
     setEditing(null);
-    setDraft({ name: '', parent: 'None (top level)', status: 'Active', description: '' });
+    setDraft({ name: '', slug: '', parent: 'None (top level)', status: 'Active', description: '' });
     setError('');
     setOpen(true);
   };
 
   const openEdit = (c: Category) => {
     setEditing(c);
-    setDraft({ name: c.name, parent: c.parent ?? 'None (top level)', status: c.status, description: c.description });
+    setDraft({ name: c.name, slug: c.slug || '', parent: c.parent ?? 'None (top level)', status: c.status, description: c.description });
     setError('');
     setOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!draft.name.trim()) {
       setError('Category name is required.');
       return;
     }
-    if (editing) {
-      setItems((list) =>
-      list.map((c) =>
-      c.id === editing.id ?
-      { ...c, name: draft.name, parent: draft.parent === 'None (top level)' ? null : draft.parent, status: draft.status as Category['status'], description: draft.description } :
-      c
-      )
-      );
-      toast('success', 'Category updated', `${draft.name} was saved.`);
-    } else {
-      setItems((list) => [
-      ...list,
-      {
-        id: `c-${Date.now()}`,
-        name: draft.name,
-        image: seed[0].image,
-        parent: draft.parent === 'None (top level)' ? null : draft.parent,
-        products: 0,
-        status: draft.status as Category['status'],
-        description: draft.description
-      }]
-      );
-      toast('success', 'Category created', `${draft.name} is ready for products.`);
+
+    const slug = draft.slug || draft.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    try {
+      if (editing) {
+        await api.put(`/categories/${editing.id}`, {
+          name: draft.name,
+          description: draft.description,
+          status: draft.status,
+        });
+        toast('success', 'Category updated', `${draft.name} was saved.`);
+      } else {
+        await api.post('/categories', {
+          name: draft.name,
+          slug,
+          description: draft.description,
+          status: draft.status,
+          image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=800',
+        });
+        toast('success', 'Category created', `${draft.name} is ready for products.`);
+      }
+      loadCategories();
+    } catch (err: any) {
+      toast('error', 'Error saving category', err?.message || 'Server error.');
     }
     setOpen(false);
   };
