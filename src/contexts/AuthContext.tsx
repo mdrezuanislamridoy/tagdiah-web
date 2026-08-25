@@ -12,6 +12,7 @@ export interface AuthUser {
   since: string;          // e.g. "August 2026"
   phone?: string;
   address?: string;
+  city?: string;
   avatar?: string;
   department?: string;
 }
@@ -21,11 +22,15 @@ interface AuthValue {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean; userId?: string; userEmail?: string }>;
   adminLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string; userId?: string; userEmail?: string }>;
+  verifyEmail: (userId: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  resendCode: (email: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<Pick<AuthUser, 'name' | 'phone' | 'address'>>) => void;
+  updateProfile: (data: Partial<Pick<AuthUser, 'name' | 'phone' | 'address' | 'city'>>) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -40,10 +45,24 @@ interface AuthResponse {
     role: string;
     phone?: string;
     address?: string;
+    city?: string;
     avatar?: string;
     department?: string;
     since?: string;
   };
+}
+
+interface RegisterResponse {
+  message: string;
+  userId: string;
+  email: string;
+}
+
+interface LoginResponse extends Partial<AuthResponse> {
+  needsVerification?: boolean;
+  userId?: string;
+  email?: string;
+  message?: string;
 }
 
 interface ProfileResponse {
@@ -53,6 +72,7 @@ interface ProfileResponse {
   role: string;
   phone?: string;
   address?: string;
+  city?: string;
   avatar?: string;
   department?: string;
   since?: string;
@@ -73,6 +93,7 @@ function toAuthUser(data: AuthResponse['user'] | ProfileResponse): AuthUser {
     since: data.since || '',
     phone: data.phone,
     address: data.address,
+    city: data.city,
     avatar: data.avatar,
     department: data.department,
   };
@@ -96,7 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(toAuthUser(profile));
       })
       .catch(() => {
-        // Token invalid or expired
         clearToken();
       })
       .finally(() => {
@@ -104,12 +124,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
+  /* ── Signup (returns userId for verification) ── */
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    try {
+      const data = await api.post<RegisterResponse>('/auth/register', { name, email, password });
+      return { success: true, userId: data.userId, userEmail: data.email };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Signup failed.';
+      return { success: false, error: message };
+    }
+  }, []);
+
+  /* ── Verify Email (completes registration, logs in) ── */
+  const verifyEmail = useCallback(async (userId: string, code: string) => {
+    try {
+      const data = await api.post<AuthResponse>('/auth/verify-email', { userId, code });
+      setToken(data.accessToken);
+      setUser(toAuthUser(data.user));
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Verification failed.';
+      return { success: false, error: message };
+    }
+  }, []);
+
+  /* ── Resend Verification Code ── */
+  const resendCode = useCallback(async (email: string) => {
+    try {
+      await api.post('/auth/resend-code', { email });
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to resend code.';
+      return { success: false, error: message };
+    }
+  }, []);
+
   /* ── Login (customers) ── */
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const data = await api.post<AuthResponse>('/auth/login', { email, password });
-      setToken(data.accessToken);
-      setUser(toAuthUser(data.user));
+      const data = await api.post<LoginResponse>('/auth/login', { email, password });
+
+      // Handle unverified email — backend returns needsVerification
+      if (data.needsVerification) {
+        return {
+          success: false,
+          needsVerification: true,
+          userId: data.userId,
+          userEmail: data.email,
+          error: data.message || 'Please verify your email first.',
+        };
+      }
+
+      if (data.accessToken && data.user) {
+        setToken(data.accessToken);
+        setUser(toAuthUser(data.user));
+      }
       return { success: true };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed.';
@@ -130,15 +199,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /* ── Signup ── */
-  const signup = useCallback(async (name: string, email: string, password: string) => {
+  /* ── Forgot Password ── */
+  const forgotPassword = useCallback(async (email: string) => {
     try {
-      const data = await api.post<AuthResponse>('/auth/register', { name, email, password });
-      setToken(data.accessToken);
-      setUser(toAuthUser(data.user));
-      return { success: true };
+      const data = await api.post<{ message: string }>('/auth/forgot-password', { email });
+      return { success: true, message: data.message };
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Signup failed.';
+      const message = err instanceof Error ? err.message : 'Failed to send reset code.';
+      return { success: false, error: message };
+    }
+  }, []);
+
+  /* ── Reset Password ── */
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    try {
+      const data = await api.post<{ message: string }>('/auth/reset-password', { email, code, newPassword });
+      return { success: true, message: data.message };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Password reset failed.';
       return { success: false, error: message };
     }
   }, []);
@@ -149,14 +227,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  /* ── Update profile (optimistic local + persist to backend) ── */
-  const updateProfile = useCallback((data: Partial<Pick<AuthUser, 'name' | 'phone' | 'address'>>) => {
+  /* ── Update profile ── */
+  const updateProfile = useCallback(async (data: Partial<Pick<AuthUser, 'name' | 'phone' | 'address' | 'city'>>) => {
     setUser((prev) => {
       if (!prev) return prev;
       return { ...prev, ...data };
     });
-    // Note: profile update API endpoint can be added later
-  }, []);
+
+    if (user?.id) {
+      try {
+        await api.put(`/users/${user.id}`, data);
+        return { success: true };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update profile.';
+        return { success: false, error: message };
+      }
+    }
+    return { success: true };
+  }, [user?.id]);
 
   const value = useMemo<AuthValue>(
     () => ({
@@ -167,10 +255,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       adminLogin,
       signup,
+      verifyEmail,
+      resendCode,
+      forgotPassword,
+      resetPassword,
       logout,
       updateProfile,
     }),
-    [user, isLoading, login, adminLogin, signup, logout, updateProfile]
+    [user, isLoading, login, adminLogin, signup, verifyEmail, resendCode, forgotPassword, resetPassword, logout, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

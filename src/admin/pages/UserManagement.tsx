@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UserPlusIcon,
@@ -26,6 +26,7 @@ import {
   PlusIcon,
   EyeIcon,
   RefreshCwIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import { Card, CardHeader, PageHeader } from '../components/ui/Card';
 import { Button, IconButton } from '../components/ui/Button';
@@ -38,6 +39,7 @@ import { customers as initialCustomers } from '../data/customers';
 import { initialStaffUsers, initialRoles, initialAuditLogs } from '../data/users';
 import type { StaffUser, RoleDefinition, UserAuditLog, Customer, StaffRole } from '../types';
 import { bdt, shortDate, classNames } from '../utils/format';
+import { api } from '../../utils/api';
 
 const tabs = [
   { id: 'team', label: 'Team & Staff', icon: ShieldCheckIcon },
@@ -48,6 +50,35 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]['id'];
 
+interface BackendUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatar?: string | null;
+  role: string;
+  department?: string | null;
+  city?: string | null;
+  address?: string | null;
+  status: string;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
+  lastLogin?: string | null;
+  createdAt: string;
+}
+
+interface BackendAuditLog {
+  id: string;
+  actorName: string;
+  actorEmail: string;
+  action: string;
+  target?: string | null;
+  details?: string | null;
+  ipAddress?: string | null;
+  status: string;
+  createdAt: string;
+}
+
 export function UserManagement() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabId>('team');
@@ -57,6 +88,7 @@ export function UserManagement() {
   const [customerList, setCustomerList] = useState<Customer[]>(initialCustomers);
   const [rolesList, setRolesList] = useState<RoleDefinition[]>(initialRoles);
   const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>(initialAuditLogs);
+  const [loading, setLoading] = useState(false);
 
   /* Filter states */
   const [staffSearch, setStaffSearch] = useState('');
@@ -71,9 +103,9 @@ export function UserManagement() {
 
   /* Modals */
   const [addStaffOpen, setAddStaffOpen] = useState(false);
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [editStaffUser, setEditStaffUser] = useState<StaffUser | null>(null);
   const [deleteStaffUser, setDeleteStaffUser] = useState<StaffUser | null>(null);
-  const [resetPassUser, setResetPassUser] = useState<StaffUser | null>(null);
   const [customerToBlock, setCustomerToBlock] = useState<Customer | null>(null);
 
   /* Form for new staff */
@@ -81,10 +113,97 @@ export function UserManagement() {
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'Store Manager' as StaffRole,
     department: 'Operations',
     twoFactor: true,
   });
+
+  /* Form for new customer */
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    city: 'Dhaka',
+    address: '',
+    password: '',
+  });
+
+  /* ── Load Users from Backend ── */
+  const fetchUsersAndLogs = async () => {
+    setLoading(true);
+    try {
+      const usersData = await api.get<BackendUser[]>('/users');
+      if (Array.isArray(usersData) && usersData.length > 0) {
+        const staff: StaffUser[] = [];
+        const customers: Customer[] = [];
+
+        usersData.forEach((u) => {
+          if (u.role === 'Customer') {
+            customers.push({
+              id: u.id,
+              name: u.name,
+              avatar: u.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(u.name)}`,
+              email: u.email,
+              phone: u.phone || '+880 1700 000 000',
+              city: u.city || 'Dhaka',
+              address: u.address || undefined,
+              orders: 0,
+              spent: 0,
+              joined: u.createdAt.split('T')[0],
+              status: (u.status as 'Active' | 'Blocked' | 'New') || 'Active',
+            });
+          } else {
+            staff.push({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone || '+880 1700 000 000',
+              avatar: u.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(u.name)}`,
+              role: (u.role as StaffRole) || 'Store Admin',
+              department: u.department || 'Operations',
+              status: (u.status as 'Active' | 'Inactive' | 'Suspended') || 'Active',
+              twoFactorEnabled: !!u.twoFactorEnabled,
+              lastLogin: u.lastLogin ? shortDate(u.lastLogin) : 'Never',
+              joined: u.createdAt.split('T')[0],
+              permissions: ['products', 'orders'],
+            });
+          }
+        });
+
+        if (staff.length > 0) setStaffList(staff);
+        if (customers.length > 0) setCustomerList(customers);
+      }
+    } catch {
+      // Keep initial dummy data on error
+    }
+
+    try {
+      const logsData = await api.get<BackendAuditLog[]>('/users/audit-logs');
+      if (Array.isArray(logsData) && logsData.length > 0) {
+        setAuditLogs(
+          logsData.map((l) => ({
+            id: l.id,
+            timestamp: shortDate(l.createdAt),
+            actorName: l.actorName,
+            actorEmail: l.actorEmail,
+            action: l.action,
+            targetUser: l.target || 'System',
+            details: l.details || '',
+            ipAddress: l.ipAddress || '103.145.72.18 (Dhaka, BD)',
+            status: (l.status as 'Success' | 'Warning' | 'Failed') || 'Success',
+          }))
+        );
+      }
+    } catch {
+      // Keep initial dummy logs
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchUsersAndLogs();
+  }, []);
 
   /* ── Metric calculations ── */
   const totalUsers = staffList.length + customerList.length;
@@ -133,129 +252,179 @@ export function UserManagement() {
     });
   }, [auditLogs, auditSearch, auditStatusFilter]);
 
+  /* ── Helper to generate a random secure password ── */
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let pass = '';
+    for (let i = 0; i < 10; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  };
+
   /* ── Handlers ── */
-  const handleCreateStaff = (e: React.FormEvent) => {
+  const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffForm.name || !newStaffForm.email) {
       toast('error', 'Missing details', 'Please provide at least a full name and email address.');
       return;
     }
 
-    const newStaff: StaffUser = {
-      id: `st-${Date.now()}`,
-      name: newStaffForm.name,
-      email: newStaffForm.email,
-      phone: newStaffForm.phone || '+880 1700 000 000',
-      avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(newStaffForm.name)}`,
-      role: newStaffForm.role,
-      department: newStaffForm.department,
-      status: 'Active',
-      twoFactorEnabled: newStaffForm.twoFactor,
-      lastLogin: 'Never',
-      joined: new Date().toISOString().split('T')[0],
-      permissions: ['products', 'orders'],
-    };
+    const tempPassword = newStaffForm.password || generatePassword();
 
-    setStaffList((prev) => [newStaff, ...prev]);
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString(),
-        actorName: 'Admin',
-        actorEmail: 'admin@tagdiah.com',
-        action: 'Staff Member Created',
-        targetUser: `${newStaff.name} (${newStaff.role})`,
-        details: `Invited as ${newStaff.role} in ${newStaff.department}`,
-        ipAddress: '103.145.72.18 (Dhaka, BD)',
-        status: 'Success',
-      },
-      ...prev,
-    ]);
+    try {
+      const created = await api.post<BackendUser>('/users', {
+        name: newStaffForm.name,
+        email: newStaffForm.email,
+        phone: newStaffForm.phone || '+880 1700 000 000',
+        role: newStaffForm.role,
+        department: newStaffForm.department,
+        twoFactorEnabled: newStaffForm.twoFactor,
+        password: tempPassword,
+      });
 
-    setAddStaffOpen(false);
-    setNewStaffForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'Store Manager',
-      department: 'Operations',
-      twoFactor: true,
-    });
-    toast('success', 'Invitation Sent', `${newStaff.name} has been added and invited to the team.`);
+      const newStaff: StaffUser = {
+        id: created.id || `st-${Date.now()}`,
+        name: newStaffForm.name,
+        email: newStaffForm.email,
+        phone: newStaffForm.phone || '+880 1700 000 000',
+        avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(newStaffForm.name)}`,
+        role: newStaffForm.role,
+        department: newStaffForm.department,
+        status: 'Active',
+        twoFactorEnabled: newStaffForm.twoFactor,
+        lastLogin: 'Never',
+        joined: new Date().toISOString().split('T')[0],
+        permissions: ['products', 'orders'],
+      };
+
+      setStaffList((prev) => [newStaff, ...prev]);
+      setAddStaffOpen(false);
+      setNewStaffForm({
+        name: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'Store Manager',
+        department: 'Operations',
+        twoFactor: true,
+      });
+      toast('success', 'Invitation Sent', `${newStaff.name} has been added and invited to the team.`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create staff member.';
+      toast('error', 'Creation Failed', message);
+    }
   };
 
-  const handleUpdateStaff = (e: React.FormEvent) => {
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomerForm.name || !newCustomerForm.email) {
+      toast('error', 'Missing details', 'Please provide a name and email address.');
+      return;
+    }
+
+    const customerPassword = newCustomerForm.password || generatePassword();
+
+    try {
+      const created = await api.post<BackendUser>('/users', {
+        name: newCustomerForm.name,
+        email: newCustomerForm.email,
+        phone: newCustomerForm.phone || '+880 1700 000 000',
+        city: newCustomerForm.city || 'Dhaka',
+        address: newCustomerForm.address || '',
+        password: customerPassword,
+        role: 'Customer',
+      });
+
+      const newCustomer: Customer = {
+        id: created.id || `u-${Date.now()}`,
+        name: newCustomerForm.name,
+        avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(newCustomerForm.name)}`,
+        email: newCustomerForm.email,
+        phone: newCustomerForm.phone || '+880 1700 000 000',
+        city: newCustomerForm.city || 'Dhaka',
+        address: newCustomerForm.address || '',
+        orders: 0,
+        spent: 0,
+        joined: new Date().toISOString().split('T')[0],
+        status: 'Active',
+      };
+
+      setCustomerList((prev) => [newCustomer, ...prev]);
+      setAddCustomerOpen(false);
+      setNewCustomerForm({
+        name: '',
+        email: '',
+        phone: '',
+        city: 'Dhaka',
+        address: '',
+        password: '',
+      });
+      toast(
+        'success',
+        'Customer Created & Emailed',
+        `Account created for ${newCustomer.name}. Login credentials have been sent to ${newCustomer.email} via email.`
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create customer.';
+      toast('error', 'Creation Failed', message);
+    }
+  };
+
+  const handleUpdateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editStaffUser) return;
 
-    setStaffList((prev) =>
-      prev.map((s) => (s.id === editStaffUser.id ? editStaffUser : s))
-    );
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString(),
-        actorName: 'Admin',
-        actorEmail: 'admin@tagdiah.com',
-        action: 'Staff Profile Updated',
-        targetUser: editStaffUser.name,
-        details: `Role: ${editStaffUser.role}, Status: ${editStaffUser.status}`,
-        ipAddress: '103.145.72.18 (Dhaka, BD)',
-        status: 'Success',
-      },
-      ...prev,
-    ]);
+    try {
+      await api.put(`/users/${editStaffUser.id}`, {
+        name: editStaffUser.name,
+        email: editStaffUser.email,
+        phone: editStaffUser.phone,
+        role: editStaffUser.role,
+        status: editStaffUser.status,
+        twoFactorEnabled: editStaffUser.twoFactorEnabled,
+      });
 
-    toast('success', 'User updated', `Updated account for ${editStaffUser.name}.`);
-    setEditStaffUser(null);
+      setStaffList((prev) =>
+        prev.map((s) => (s.id === editStaffUser.id ? editStaffUser : s))
+      );
+      toast('success', 'User updated', `Updated account for ${editStaffUser.name}.`);
+      setEditStaffUser(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update user.';
+      toast('error', 'Update Failed', message);
+    }
   };
 
-  const handleDeleteStaff = () => {
+  const handleDeleteStaff = async () => {
     if (!deleteStaffUser) return;
-    setStaffList((prev) => prev.filter((s) => s.id !== deleteStaffUser.id));
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString(),
-        actorName: 'Admin',
-        actorEmail: 'admin@tagdiah.com',
-        action: 'Staff Removed',
-        targetUser: deleteStaffUser.name,
-        details: `Account deleted from team directory`,
-        ipAddress: '103.145.72.18 (Dhaka, BD)',
-        status: 'Warning',
-      },
-      ...prev,
-    ]);
-    toast('success', 'Staff Member Removed', `${deleteStaffUser.name} was removed from the team.`);
-    setDeleteStaffUser(null);
+    try {
+      await api.delete(`/users/${deleteStaffUser.id}`);
+      setStaffList((prev) => prev.filter((s) => s.id !== deleteStaffUser.id));
+      toast('success', 'Staff Member Removed', `${deleteStaffUser.name} was removed from the team.`);
+      setDeleteStaffUser(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to delete user.';
+      toast('error', 'Removal Failed', message);
+    }
   };
 
-  const handleToggleCustomerBlock = (customer: Customer) => {
+  const handleToggleCustomerBlock = async (customer: Customer) => {
     const newStatus = customer.status === 'Blocked' ? 'Active' : 'Blocked';
-    setCustomerList((prev) =>
-      prev.map((c) => (c.id === customer.id ? { ...c, status: newStatus } : c))
-    );
-    setAuditLogs((prev) => [
-      {
-        id: `log-${Date.now()}`,
-        timestamp: new Date().toLocaleString(),
-        actorName: 'Admin',
-        actorEmail: 'admin@tagdiah.com',
-        action: newStatus === 'Blocked' ? 'Customer Blocked' : 'Customer Unblocked',
-        targetUser: customer.name,
-        details: `Status set to ${newStatus}`,
-        ipAddress: '103.145.72.18 (Dhaka, BD)',
-        status: newStatus === 'Blocked' ? 'Warning' : 'Success',
-      },
-      ...prev,
-    ]);
-    toast(
-      newStatus === 'Blocked' ? 'warning' : 'success',
-      newStatus === 'Blocked' ? 'Customer Blocked' : 'Customer Restored',
-      `${customer.name} is now ${newStatus.toLowerCase()}.`
-    );
-    setCustomerToBlock(null);
+    try {
+      await api.put(`/users/${customer.id}`, { status: newStatus });
+      setCustomerList((prev) =>
+        prev.map((c) => (c.id === customer.id ? { ...c, status: newStatus } : c))
+      );
+      toast(
+        newStatus === 'Blocked' ? 'warning' : 'success',
+        newStatus === 'Blocked' ? 'Customer Blocked' : 'Customer Restored',
+        `${customer.name} is now ${newStatus.toLowerCase()}.`
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update customer status.';
+      toast('error', 'Action Failed', message);
+    }
   };
 
   const handleExport = () => {
@@ -451,31 +620,23 @@ export function UserManagement() {
                     <StatusPill status={staff.status} />
                   </Td>
 
-                  <Td className="whitespace-nowrap text-[12.5px] text-ink-50">
+                  <Td className="whitespace-nowrap text-[12.5px] text-ink-50 font-mono">
                     {staff.lastLogin}
                   </Td>
 
-                  <Td>
+                  <Td className="text-right">
                     <div className="flex justify-end gap-1.5">
                       <IconButton
-                        label="Edit Staff Profile"
+                        label="Edit Profile"
                         icon={EditIcon}
                         onClick={() => setEditStaffUser(staff)}
-                      />
-                      <IconButton
-                        label="Reset Password"
-                        icon={KeyIcon}
-                        onClick={() => {
-                          setResetPassUser(staff);
-                          toast('info', 'Temporary Code', `Reset link dispatched to ${staff.email}.`);
-                        }}
                       />
                       {staff.role !== 'Super Admin' && (
                         <IconButton
                           label="Remove Staff"
                           icon={Trash2Icon}
                           onClick={() => setDeleteStaffUser(staff)}
-                          className="hover:border-danger/30 hover:bg-danger-tint hover:text-danger"
+                          className="text-danger hover:bg-danger-tint"
                         />
                       )}
                     </div>
@@ -512,9 +673,14 @@ export function UserManagement() {
                 className="w-[160px]"
               />
             </div>
-            <p className="text-[13px] text-ink-50">
-              Showing <span className="font-semibold text-ink">{filteredCustomers.length}</span> customers
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-[13px] text-ink-50">
+                Showing <span className="font-semibold text-ink">{filteredCustomers.length}</span> customers
+              </p>
+              <Button size="sm" icon={UserPlusIcon} onClick={() => setAddCustomerOpen(true)}>
+                Add Customer
+              </Button>
+            </div>
           </div>
 
           <TableShell>
@@ -645,7 +811,7 @@ export function UserManagement() {
                               <span
                                 key={r.id}
                                 className={classNames(
-                                  'rounded-lg px-2.5 py-1 text-[11px] font-medium border',
+                                   'rounded-lg px-2.5 py-1 text-[11px] font-medium border',
                                   hasPermission
                                     ? 'bg-sage-tint text-sage border-sage/20'
                                     : 'bg-surface text-ink-30 border-line'
@@ -695,7 +861,10 @@ export function UserManagement() {
               size="sm"
               variant="secondary"
               icon={RefreshCwIcon}
-              onClick={() => toast('info', 'Logs Refreshed', 'Audit log is up to date.')}
+              onClick={() => {
+                fetchUsersAndLogs();
+                toast('info', 'Logs Refreshed', 'Audit log is up to date.');
+              }}
             >
               Refresh
             </Button>
@@ -774,7 +943,7 @@ export function UserManagement() {
       >
         <form onSubmit={handleCreateStaff} className="space-y-4">
           <p className="text-[13px] text-ink-50">
-            Send an onboarding invitation link to add an administrator, manager, or support agent.
+            Create an administrator, manager, or support agent account with access credentials.
           </p>
 
           <Field label="Full Name" required>
@@ -808,6 +977,26 @@ export function UserManagement() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Initial Password (Optional)">
+              <div className="flex gap-2">
+                <TextInput
+                  type="text"
+                  placeholder="Auto-generated if empty"
+                  value={newStaffForm.password}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, password: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setNewStaffForm({ ...newStaffForm, password: generatePassword() })}
+                  title="Generate Password"
+                >
+                  <SparklesIcon className="h-4 w-4 text-gold" />
+                </Button>
+              </div>
+            </Field>
+
             <Field label="Assigned Role" required>
               <Select
                 label="Role"
@@ -816,16 +1005,16 @@ export function UserManagement() {
                 options={['Store Admin', 'Store Manager', 'Support Agent', 'Inventory Lead']}
               />
             </Field>
-
-            <Field label="Department">
-              <Select
-                label="Department"
-                value={newStaffForm.department}
-                onChange={(v) => setNewStaffForm({ ...newStaffForm, department: v })}
-                options={['Operations', 'Sales & Marketing', 'Customer Service', 'Warehouse & Logistics']}
-              />
-            </Field>
           </div>
+
+          <Field label="Department">
+            <Select
+              label="Department"
+              value={newStaffForm.department}
+              onChange={(v) => setNewStaffForm({ ...newStaffForm, department: v })}
+              options={['Operations', 'Sales & Marketing', 'Customer Service', 'Warehouse & Logistics']}
+            />
+          </Field>
 
           <div className="rounded-xl border border-line bg-cream/40 p-4">
             <Toggle
@@ -840,7 +1029,95 @@ export function UserManagement() {
             <Button variant="secondary" type="button" onClick={() => setAddStaffOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Send Invitation</Button>
+            <Button type="submit">Create Staff Account</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Add Customer Modal (Sends Email with Credentials) ── */}
+      <Modal
+        open={addCustomerOpen}
+        onClose={() => setAddCustomerOpen(false)}
+        title="Create Customer Account"
+      >
+        <form onSubmit={handleCreateCustomer} className="space-y-4">
+          <div className="rounded-xl border border-gold/30 bg-gold-tint/40 p-3.5 text-xs text-ink-70 leading-relaxed">
+            ✨ <strong className="text-ink">Automated Notification:</strong> When this account is created, Tagdiah will automatically dispatch a welcome email with their generated login credentials via Nodemailer.
+          </div>
+
+          <Field label="Full Name" required>
+            <TextInput
+              required
+              placeholder="e.g. Farhana Yasmin"
+              value={newCustomerForm.name}
+              onChange={(e) => setNewCustomerForm({ ...newCustomerForm, name: e.target.value })}
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Email Address" required>
+              <TextInput
+                type="email"
+                required
+                placeholder="customer@example.com"
+                value={newCustomerForm.email}
+                onChange={(e) => setNewCustomerForm({ ...newCustomerForm, email: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Phone Number">
+              <TextInput
+                type="tel"
+                placeholder="+880 1712 000 000"
+                value={newCustomerForm.phone}
+                onChange={(e) => setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })}
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="City">
+              <TextInput
+                placeholder="e.g. Dhaka"
+                value={newCustomerForm.city}
+                onChange={(e) => setNewCustomerForm({ ...newCustomerForm, city: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Account Password (Optional)">
+              <div className="flex gap-2">
+                <TextInput
+                  type="text"
+                  placeholder="Auto-generated if empty"
+                  value={newCustomerForm.password}
+                  onChange={(e) => setNewCustomerForm({ ...newCustomerForm, password: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setNewCustomerForm({ ...newCustomerForm, password: generatePassword() })}
+                  title="Generate Password"
+                >
+                  <SparklesIcon className="h-4 w-4 text-gold" />
+                </Button>
+              </div>
+            </Field>
+          </div>
+
+          <Field label="Delivery Address">
+            <TextInput
+              placeholder="e.g. House 42, Road 7, Sector 3, Uttara"
+              value={newCustomerForm.address}
+              onChange={(e) => setNewCustomerForm({ ...newCustomerForm, address: e.target.value })}
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" type="button" onClick={() => setAddCustomerOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Create &amp; Email Credentials</Button>
           </div>
         </form>
       </Modal>

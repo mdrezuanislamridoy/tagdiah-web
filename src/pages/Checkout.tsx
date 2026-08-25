@@ -48,6 +48,10 @@ export function Checkout() {
     }, 1100);
   };
 
+  const nameParts = (user?.name || '').trim().split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
   return (
     <div className="mx-auto max-w-shell px-5 py-10 lg:px-8 lg:py-14">
       <Breadcrumbs items={[{ label: 'Cart', to: '/cart' }, { label: 'Checkout' }]} />
@@ -61,14 +65,14 @@ export function Checkout() {
         <div className="space-y-12">
           <Section step="01" title="Contact">
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="First name" name="first-name" required defaultValue="Nusrat" autoComplete="given-name" />
-              <Field label="Last name" name="last-name" required defaultValue="Jahan" autoComplete="family-name" />
+              <Field label="First name" name="first-name" required defaultValue={firstName} autoComplete="given-name" />
+              <Field label="Last name" name="last-name" required defaultValue={lastName} autoComplete="family-name" />
               <Field
                 label="Email"
                 name="email"
                 type="email"
                 required
-                defaultValue="nusrat.jahan@example.com"
+                defaultValue={user?.email || ''}
                 autoComplete="email"
                 className="sm:col-span-2" />
               
@@ -77,7 +81,7 @@ export function Checkout() {
                 name="phone-number"
                 type="tel"
                 required
-                defaultValue="+880 1712 004 118"
+                defaultValue={user?.phone || ''}
                 hint="We call before delivery for large pieces."
                 className="sm:col-span-2" />
               
@@ -90,11 +94,11 @@ export function Checkout() {
                 label="Street address"
                 name="street-address"
                 required
-                defaultValue="Flat 4B, House 27, Road 11"
+                defaultValue={user?.address || ''}
                 className="sm:col-span-2" />
               
               <Field label="Area" name="area" required defaultValue="Dhanmondi" />
-              <Field label="City" name="city" required defaultValue="Dhaka" />
+              <Field label="City" name="city" required defaultValue={user?.city || 'Dhaka'} />
               <Field label="Postcode" name="postcode" required defaultValue="1209" />
               <Field label="Division" name="division" defaultValue="Dhaka" />
               <TextArea
