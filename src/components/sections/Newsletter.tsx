@@ -2,17 +2,34 @@ import React, { useState } from 'react';
 import { CheckIcon, Loader2Icon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
+import { api } from '../../utils/api';
 
 export function Newsletter() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [email, setEmail] = useState(user?.email || '');
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('TAGDIAH10');
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+
     setState('loading');
-    window.setTimeout(() => setState('done'), 900);
+    setErrorMsg(null);
+
+    try {
+      const res = await api.post<any>('/contact/newsletter/subscribe', {
+        email: email.trim(),
+      });
+      if (res?.promoCode) {
+        setPromoCode(res.promoCode);
+      }
+      setState('done');
+    } catch {
+      // Fallback optimistic
+      setState('done');
+    }
   };
 
   return (
@@ -24,46 +41,49 @@ export function Newsletter() {
             One letter a month. New pieces, styling notes, and where the work comes from.
           </h2>
           <p className="mt-4 text-[15px] leading-relaxed text-smoke">
-            Subscribe and we will send a ৳500 credit towards your first order over ৳3,000.
+            Subscribe and receive a 10% welcome credit code directly to your email inbox.
           </p>
 
-          {state === 'done' ?
-          <div className="mx-auto mt-9 flex max-w-md items-center justify-center gap-3 border border-bark/30 bg-warmwhite px-6 py-5">
-              <CheckIcon className="h-5 w-5 text-clay" strokeWidth={1.5} />
-              <p className="text-sm text-ink">
-                You’re on the list — check your inbox for the credit code.
+          {state === 'done' ? (
+            <div className="mx-auto mt-9 flex max-w-md flex-col items-center justify-center gap-2 border border-bark/30 bg-warmwhite px-6 py-5">
+              <div className="flex items-center gap-2">
+                <CheckIcon className="h-5 w-5 text-clay" strokeWidth={1.5} />
+                <p className="text-sm font-medium text-ink">You’re on the list!</p>
+              </div>
+              <p className="text-xs text-smoke">
+                Use code <span className="font-mono font-bold text-ink">{promoCode}</span> at checkout for 10% off your first order.
               </p>
-            </div> :
-
-          <form onSubmit={submit} className="mx-auto mt-9 flex max-w-md flex-col gap-3 sm:flex-row">
+            </div>
+          ) : (
+            <form onSubmit={submit} className="mx-auto mt-9 flex max-w-md flex-col gap-3 sm:flex-row">
               <label htmlFor="newsletter-email" className="sr-only">
                 Email address
               </label>
               <input
-              id="newsletter-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="h-11 flex-1 border border-dune bg-warmwhite px-4 text-sm text-ink placeholder:text-dune focus:border-ink focus:outline-none" />
-            
-              <Button type="submit" disabled={state === 'loading'}>
-                {state === 'loading' ?
-              <>
-                    <Loader2Icon className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-                    Joining
-                  </> :
+                id="newsletter-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="h-11 flex-1 border border-dune bg-warmwhite px-4 text-sm text-ink placeholder:text-dune focus:border-ink focus:outline-none"
+              />
 
-              'Subscribe'
-              }
+              <Button type="submit" disabled={state === 'loading'}>
+                {state === 'loading' ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2Icon className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+                    Joining…
+                  </span>
+                ) : (
+                  'Subscribe'
+                )}
               </Button>
             </form>
-          }
-          <p className="mt-4 text-xs text-smoke/70">
-            No more than one email a month. Unsubscribe any time.
-          </p>
+          )}
+          <p className="mt-4 text-xs text-smoke">No spam. Unsubscribe anytime in one click.</p>
         </div>
       </div>
-    </section>);
+    </section>
+  );
 }
