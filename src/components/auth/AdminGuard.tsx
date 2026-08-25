@@ -17,8 +17,14 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  // Not logged in at all -> Go to admin login
+  if (!isAuthenticated) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
+  }
+
+  // Logged in as normal customer (non-admin) -> Redirect to Customer Dashboard
+  if (!isAdmin) {
+    return <Navigate to="/account" replace />;
   }
 
   return <>{children}</>;

@@ -1,25 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { HeartIcon, MapPinIcon, PackageIcon, UserIcon, LogOutIcon, CheckIcon, XIcon } from 'lucide-react';
+import {
+  HeartIcon,
+  MapPinIcon,
+  PackageIcon,
+  UserIcon,
+  LogOutIcon,
+  CheckIcon,
+  TruckIcon,
+  ClockIcon,
+  ShieldCheckIcon,
+  ArrowRightIcon,
+  ExternalLinkIcon,
+  CheckCircle2Icon,
+  ShoppingBagIcon,
+  RotateCcwIcon,
+  SparklesIcon,
+} from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Button } from '../components/ui/Button';
 import { orders } from '../data/orders';
 import { productById } from '../data/products';
 import { cx, formatPrice } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
+import { useStore } from '../contexts/StoreContext';
 
 const statusStyles: Record<string, string> = {
-  Delivered: 'bg-linen text-bark',
-  'In transit': 'bg-ink text-cream',
-  Processing: 'bg-sand text-ink',
-  Cancelled: 'bg-clay/15 text-clay',
+  Delivered: 'bg-sage/15 text-sage border border-sage/30',
+  'In transit': 'bg-gold/15 text-gold border border-gold/30',
+  Processing: 'bg-sand text-ink border border-dune',
+  Cancelled: 'bg-clay/15 text-clay border border-clay/30',
 };
 
-const tabs = ['Orders', 'Details', 'Addresses'] as const;
+const tabs = ['Dashboard', 'Orders & Tracking', 'Addresses', 'Details & Security'] as const;
+
+type TabType = (typeof tabs)[number];
 
 export function Account() {
   const { user, isAuthenticated, logout, updateProfile } = useAuth();
-  const [tab, setTab] = useState<(typeof tabs)[number]>('Orders');
+  const { wishlist } = useStore();
+  const [tab, setTab] = useState<TabType>('Dashboard');
+  const [orderFilter, setOrderFilter] = useState<string>('All');
 
   /* Edit state */
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -36,6 +57,15 @@ export function Account() {
   if (!isAuthenticated || !user) {
     return <Navigate to="/auth" replace />;
   }
+
+  const activeShipment = useMemo(() => {
+    return orders.find((o) => o.status === 'In transit' || o.status === 'Processing');
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    if (orderFilter === 'All') return orders;
+    return orders.filter((o) => o.status === orderFilter);
+  }, [orderFilter]);
 
   const handleSaveDetails = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,18 +86,18 @@ export function Account() {
   return (
     <>
       <PageHeader
-        eyebrow={`Customer since ${user.since || '2026'}`}
+        eyebrow={`Member since ${user.since || '2026'}`}
         title={`Hello, ${user.name.split(' ')[0]}`}
-        intro="Track deliveries, revisit past orders and keep your details up to date."
-        crumbs={[{ label: 'My account' }]}
+        intro="Welcome to your personal dashboard. Track live shipments, manage addresses and view order history."
+        crumbs={[{ label: 'My Dashboard' }]}
       >
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             to="/wishlist"
             className="flex items-center gap-2 border border-ink/25 px-5 py-3 text-[11px] uppercase tracking-widest text-ink transition-colors duration-200 ease-soft hover:border-ink hover:bg-ink hover:text-cream"
           >
             <HeartIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
-            Wishlist
+            Wishlist ({wishlist.length})
           </Link>
           <button
             type="button"
@@ -80,10 +110,27 @@ export function Account() {
         </div>
       </PageHeader>
 
-      <div className="mx-auto max-w-shell px-5 py-12 lg:px-8 lg:py-16">
-        <div className="grid gap-12 lg:grid-cols-[220px_1fr] lg:gap-16">
+      <div className="mx-auto max-w-shell px-5 py-10 lg:px-8 lg:py-14">
+        <div className="grid gap-10 lg:grid-cols-[240px_1fr] lg:gap-14">
+          {/* Sidebar navigation */}
           <nav aria-label="Account sections" className="lg:sticky lg:top-28 lg:self-start">
-            <ul className="flex gap-2 border-b border-sand lg:flex-col lg:gap-0 lg:border-b-0">
+            <div className="mb-6 rounded-none border border-sand bg-warmwhite p-5">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 items-center justify-center bg-ink text-sm font-semibold uppercase text-cream">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-base font-medium text-ink">{user.name}</p>
+                  <p className="truncate text-xs text-smoke">{user.email}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-1.5 border-t border-sand pt-3 text-[11px] text-bark">
+                <ShieldCheckIcon className="h-3.5 w-3.5 text-sage" />
+                <span>Verified Customer</span>
+              </div>
+            </div>
+
+            <ul className="flex gap-2 border-b border-sand lg:flex-col lg:gap-0 lg:border-b-0 lg:border-l lg:border-sand">
               {tabs.map((item) => (
                 <li key={item}>
                   <button
@@ -91,10 +138,10 @@ export function Account() {
                     onClick={() => setTab(item)}
                     aria-current={tab === item}
                     className={cx(
-                      'w-full border-b-2 px-1 py-3 text-left text-sm transition-colors duration-200 ease-soft lg:border-b lg:border-sand lg:px-0',
+                      'w-full border-b-2 px-3 py-3 text-left text-[13px] transition-all duration-200 ease-soft lg:-ml-[2px] lg:border-b-0 lg:border-l-2 lg:px-4',
                       tab === item
-                        ? 'border-ink text-ink font-medium'
-                        : 'border-transparent text-smoke hover:text-ink lg:border-sand'
+                        ? 'border-ink text-ink font-medium bg-linen/40'
+                        : 'border-transparent text-smoke hover:text-ink hover:bg-linen/20'
                     )}
                   >
                     {item}
@@ -104,74 +151,358 @@ export function Account() {
             </ul>
           </nav>
 
-          <div>
-            {tab === 'Orders' && (
-              <ul className="space-y-5">
-                {orders.map((order) => (
-                  <li key={order.id} className="border border-sand bg-warmwhite">
-                    <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-sand px-6 py-4">
+          {/* Tab Content */}
+          <div className="min-w-0">
+            {/* ═══════════════════════════════════════════════════════
+                TAB 1: DASHBOARD OVERVIEW
+            ═══════════════════════════════════════════════════════ */}
+            {tab === 'Dashboard' && (
+              <div className="space-y-8">
+                {/* Stat KPI Cards */}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="border border-sand bg-warmwhite p-5">
+                    <span className="eyebrow text-smoke block">Total Orders</span>
+                    <span className="mt-2 font-display text-3xl font-light text-ink">{orders.length}</span>
+                    <span className="mt-1 block text-xs text-smoke">Lifetime placed</span>
+                  </div>
+
+                  <div className="border border-sand bg-warmwhite p-5">
+                    <span className="eyebrow text-smoke block">In Transit</span>
+                    <span className="mt-2 font-display text-3xl font-light text-gold">
+                      {orders.filter((o) => o.status === 'In transit').length}
+                    </span>
+                    <span className="mt-1 block text-xs text-smoke">Active package</span>
+                  </div>
+
+                  <div className="border border-sand bg-warmwhite p-5">
+                    <span className="eyebrow text-smoke block">Saved Items</span>
+                    <span className="mt-2 font-display text-3xl font-light text-ink">{wishlist.length}</span>
+                    <span className="mt-1 block text-xs text-smoke">In your wishlist</span>
+                  </div>
+
+                  <div className="border border-sand bg-warmwhite p-5">
+                    <span className="eyebrow text-smoke block">City</span>
+                    <span className="mt-2 truncate font-display text-xl font-light text-ink">
+                      {user.city || 'Dhaka'}
+                    </span>
+                    <span className="mt-1 block text-xs text-smoke">Default delivery</span>
+                  </div>
+                </div>
+
+                {/* Live Order Tracker Banner */}
+                {activeShipment && (
+                  <div className="border border-gold/40 bg-warmwhite p-6 sm:p-7 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 h-28 w-28 -translate-y-6 translate-x-6 rounded-full bg-gold/10 pointer-events-none" />
+                    
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sand pb-4">
                       <div>
-                        <p className="eyebrow text-bark">Order</p>
-                        <p className="mt-1 text-sm text-ink">{order.id}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-gold animate-pulse" />
+                          <span className="eyebrow text-gold font-semibold">Live Shipment Tracking</span>
+                        </div>
+                        <h3 className="mt-1 font-display text-xl text-ink">
+                          Order #{activeShipment.id} is {activeShipment.status.toLowerCase()}
+                        </h3>
                       </div>
-                      <div>
-                        <p className="eyebrow text-bark">Placed</p>
-                        <p className="mt-1 text-sm text-ink">{order.date}</p>
-                      </div>
-                      <div>
-                        <p className="eyebrow text-bark">Total</p>
-                        <p className="mt-1 text-sm text-ink">{formatPrice(order.totals.total)}</p>
-                      </div>
-                      <span
-                        className={cx(
-                          'ml-auto px-3 py-1 text-[10px] uppercase tracking-widest',
-                          statusStyles[order.status]
-                        )}
+                      <Link
+                        to={`/orders/${activeShipment.id}`}
+                        className="inline-flex items-center gap-2 bg-ink px-5 py-2.5 text-[11px] uppercase tracking-widest text-cream transition-colors hover:bg-clay"
                       >
-                        {order.status}
-                      </span>
+                        Track Package <ArrowRightIcon className="h-3.5 w-3.5" />
+                      </Link>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-6 px-6 py-5">
-                      <ul className="flex gap-3">
-                        {order.items.map((item) => {
-                          const product = productById(item.productId);
-                          if (!product) return null;
-                          return (
-                            <li key={item.productId}>
-                              <img
-                                src={product.images[0]}
-                                alt={product.name}
-                                className="h-16 w-14 object-cover"
-                              />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <p className="text-sm text-smoke">
-                        {order.items.length} {order.items.length === 1 ? 'piece' : 'pieces'} ·{' '}
-                        {order.courier}
-                      </p>
-                      <div className="ml-auto flex gap-3">
-                        <Link
-                          to={`/orders/${order.id}`}
-                          className="border border-ink/25 px-5 py-2.5 text-[11px] uppercase tracking-widest text-ink transition-colors duration-200 ease-soft hover:border-ink hover:bg-ink hover:text-cream"
-                        >
-                          View details
-                        </Link>
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3 text-sm">
+                      <div>
+                        <p className="eyebrow text-smoke">Courier Partner</p>
+                        <p className="mt-1 font-medium text-ink flex items-center gap-1.5">
+                          <TruckIcon className="h-4 w-4 text-brown" /> {activeShipment.courier}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="eyebrow text-smoke">Tracking Number</p>
+                        <p className="mt-1 font-mono font-medium text-ink">{activeShipment.tracking}</p>
+                      </div>
+                      <div>
+                        <p className="eyebrow text-smoke">Destination</p>
+                        <p className="mt-1 truncate text-ink">{activeShipment.address}</p>
                       </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
+
+                    {/* Progress Track */}
+                    <div className="mt-6 border-t border-sand pt-5">
+                      <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                        <div className="flex flex-col items-center gap-1.5 text-ink font-medium">
+                          <div className="h-2 w-full bg-ink" />
+                          <span>Order Placed</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5 text-ink font-medium">
+                          <div className="h-2 w-full bg-ink" />
+                          <span>Processing</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5 text-gold font-medium">
+                          <div className="h-2 w-full bg-gold animate-pulse" />
+                          <span>In Transit</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-1.5 text-smoke">
+                          <div className="h-2 w-full bg-sand" />
+                          <span>Delivered</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Orders Preview */}
+                <div className="border border-sand bg-warmwhite p-6 sm:p-7">
+                  <div className="flex items-center justify-between border-b border-sand pb-4">
+                    <h3 className="font-display text-xl font-light text-ink">Recent Orders</h3>
+                    <button
+                      type="button"
+                      onClick={() => setTab('Orders & Tracking')}
+                      className="text-[11px] uppercase tracking-widest text-ink hover:text-clay underline underline-offset-4"
+                    >
+                      View all ({orders.length})
+                    </button>
+                  </div>
+
+                  <ul className="divide-y divide-sand mt-4">
+                    {orders.slice(0, 2).map((order) => (
+                      <li key={order.id} className="py-4 first:pt-2 last:pb-0 flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center border border-sand bg-cream">
+                            <PackageIcon className="h-5 w-5 text-bark" strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-ink text-sm">#{order.id}</p>
+                            <p className="text-xs text-smoke">{order.date} · {formatPrice(order.totals.total)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <span className={cx('px-2.5 py-1 text-[10px] uppercase tracking-widest', statusStyles[order.status])}>
+                            {order.status}
+                          </span>
+                          <Link
+                            to={`/orders/${order.id}`}
+                            className="border border-ink/25 px-4 py-2 text-[10px] uppercase tracking-widest text-ink transition-colors hover:border-ink hover:bg-ink hover:text-cream"
+                          >
+                            Track
+                          </Link>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             )}
 
-            {tab === 'Details' && (
-              <div className="max-w-lg border border-sand bg-warmwhite p-8">
+            {/* ═══════════════════════════════════════════════════════
+                TAB 2: ORDERS & LIVE TRACKING
+            ═══════════════════════════════════════════════════════ */}
+            {tab === 'Orders & Tracking' && (
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sand pb-4">
+                  <div className="flex flex-wrap gap-2">
+                    {['All', 'In transit', 'Processing', 'Delivered', 'Cancelled'].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setOrderFilter(f)}
+                        className={cx(
+                          'px-3.5 py-1.5 text-xs transition-colors',
+                          orderFilter === f
+                            ? 'bg-ink text-cream'
+                            : 'border border-sand bg-warmwhite text-smoke hover:text-ink'
+                        )}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-smoke">
+                    Showing <span className="font-medium text-ink">{filteredOrders.length}</span> orders
+                  </p>
+                </div>
+
+                <ul className="space-y-6">
+                  {filteredOrders.map((order) => (
+                    <li key={order.id} className="border border-sand bg-warmwhite overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-b border-sand bg-linen/30 px-6 py-4">
+                        <div className="flex flex-wrap items-center gap-6">
+                          <div>
+                            <p className="eyebrow text-bark">Order ID</p>
+                            <p className="mt-0.5 text-sm font-semibold text-ink">#{order.id}</p>
+                          </div>
+                          <div>
+                            <p className="eyebrow text-bark">Placed on</p>
+                            <p className="mt-0.5 text-sm text-ink">{order.date}</p>
+                          </div>
+                          <div>
+                            <p className="eyebrow text-bark">Total Amount</p>
+                            <p className="mt-0.5 text-sm font-medium text-ink">{formatPrice(order.totals.total)}</p>
+                          </div>
+                        </div>
+
+                        <span className={cx('px-3 py-1 text-[10px] uppercase tracking-widest font-medium', statusStyles[order.status])}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      <div className="p-6">
+                        <div className="flex flex-wrap items-center gap-6">
+                          <ul className="flex gap-3">
+                            {order.items.map((item) => {
+                              const product = productById(item.productId);
+                              if (!product) return null;
+                              return (
+                                <li key={item.productId} className="relative group">
+                                  <img
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    className="h-16 w-14 object-cover border border-sand"
+                                  />
+                                </li>
+                              );
+                            })}
+                          </ul>
+
+                          <div className="space-y-1 text-sm">
+                            <p className="text-smoke">
+                              {order.items.length} {order.items.length === 1 ? 'item' : 'items'} · Courier:{' '}
+                              <strong className="text-ink font-medium">{order.courier}</strong>
+                            </p>
+                            {order.tracking !== '—' && (
+                              <p className="text-xs text-smoke font-mono">
+                                Tracking: <span className="text-ink font-semibold">{order.tracking}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="ml-auto flex items-center gap-3">
+                            <Link
+                              to={`/orders/${order.id}`}
+                              className="inline-flex items-center gap-2 bg-ink px-5 py-2.5 text-[11px] uppercase tracking-widest text-cream transition-colors hover:bg-clay"
+                            >
+                              <TruckIcon className="h-3.5 w-3.5" />
+                              Track Order
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════
+                TAB 3: SAVED ADDRESSES
+            ═══════════════════════════════════════════════════════ */}
+            {tab === 'Addresses' && (
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="border border-ink bg-warmwhite p-7">
+                  <div className="flex items-center justify-between text-bark">
+                    <div className="flex items-center gap-2">
+                      <MapPinIcon className="h-4 w-4" strokeWidth={1.5} />
+                      <span className="eyebrow font-semibold">Default Delivery Address</span>
+                    </div>
+                    {addressSaved && (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                        <CheckIcon className="h-3.5 w-3.5" /> Address Saved
+                      </span>
+                    )}
+                  </div>
+
+                  {isEditingAddress ? (
+                    <form onSubmit={handleSaveAddress} className="mt-5 space-y-4">
+                      <div>
+                        <label className="eyebrow block text-bark mb-1.5">Street Address</label>
+                        <input
+                          type="text"
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          placeholder="e.g. Flat 4B, House 27, Road 11, Dhanmondi"
+                          required
+                          className="h-10 w-full border border-sand bg-white px-3 text-sm text-ink focus:border-ink focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="eyebrow block text-bark mb-1.5">City / Area</label>
+                        <input
+                          type="text"
+                          value={editCity}
+                          onChange={(e) => setEditCity(e.target.value)}
+                          placeholder="e.g. Dhaka"
+                          required
+                          className="h-10 w-full border border-sand bg-white px-3 text-sm text-ink focus:border-ink focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="submit"
+                          className="bg-ink px-4 py-2 text-[10px] uppercase tracking-widest text-cream hover:bg-clay"
+                        >
+                          Save Address
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="border border-sand px-3 py-2 text-[10px] uppercase tracking-widest text-smoke"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <p className="mt-5 text-sm leading-relaxed text-ink">
+                        {user.address ? `${user.address}, ${user.city || 'Dhaka'}` : 'No address saved yet'}
+                      </p>
+                      <p className="mt-3 text-sm text-smoke">Phone: {user.phone || '—'}</p>
+                      <div className="mt-7 flex gap-4 text-[11px] uppercase tracking-widest">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditAddress(user.address || '');
+                            setEditCity(user.city || 'Dhaka');
+                            setIsEditingAddress(true);
+                          }}
+                          className="text-ink underline underline-offset-4 hover:text-clay font-medium"
+                        >
+                          Edit Address
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {!isEditingAddress && !user.address && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditAddress('');
+                      setEditCity('Dhaka');
+                      setIsEditingAddress(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-3 border border-dashed border-dune p-7 text-smoke transition-colors duration-200 ease-soft hover:border-ink hover:text-ink"
+                  >
+                    <PackageIcon className="h-5 w-5" strokeWidth={1.5} />
+                    <span className="text-[11px] uppercase tracking-widest">Add a new address</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════
+                TAB 4: DETAILS & SECURITY
+            ═══════════════════════════════════════════════════════ */}
+            {tab === 'Details & Security' && (
+              <div className="max-w-xl border border-sand bg-warmwhite p-8">
                 <div className="flex items-center justify-between text-bark">
                   <div className="flex items-center gap-3">
                     <UserIcon className="h-4 w-4" strokeWidth={1.5} />
-                    <span className="eyebrow">Personal details</span>
+                    <span className="eyebrow font-semibold">Personal Account Details</span>
                   </div>
                   {detailsSaved && (
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
@@ -200,7 +531,7 @@ export function Account() {
                         disabled
                         className="h-11 w-full border border-sand bg-sand/30 px-3.5 text-sm text-smoke cursor-not-allowed"
                       />
-                      <p className="mt-1 text-[11px] text-smoke">Email address cannot be changed.</p>
+                      <p className="mt-1 text-[11px] text-smoke">Verified email address cannot be changed.</p>
                     </div>
                     <div>
                       <label className="eyebrow block text-bark mb-1.5">Phone Number</label>
@@ -232,10 +563,11 @@ export function Account() {
                   <>
                     <dl className="mt-7 space-y-5 text-sm">
                       {[
-                        { label: 'Name', value: user.name },
-                        { label: 'Email', value: user.email },
-                        { label: 'Phone', value: user.phone || '—' },
-                        { label: 'Member since', value: user.since || '2026' },
+                        { label: 'Full Name', value: user.name },
+                        { label: 'Email Address', value: user.email },
+                        { label: 'Phone Number', value: user.phone || '—' },
+                        { label: 'City', value: user.city || 'Dhaka' },
+                        { label: 'Member Since', value: user.since || '2026' },
                       ].map((row) => (
                         <div key={row.label} className="flex justify-between border-b border-sand pb-4">
                           <dt className="text-smoke">{row.label}</dt>
@@ -243,113 +575,26 @@ export function Account() {
                         </div>
                       ))}
                     </dl>
-                    <Button
-                      variant="secondary"
-                      className="mt-8"
-                      onClick={() => {
-                        setEditName(user.name);
-                        setEditPhone(user.phone || '');
-                        setIsEditingDetails(true);
-                      }}
-                    >
-                      Edit details
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
 
-            {tab === 'Addresses' && (
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div className="border border-ink bg-warmwhite p-7">
-                  <div className="flex items-center justify-between text-bark">
-                    <div className="flex items-center gap-2">
-                      <MapPinIcon className="h-4 w-4" strokeWidth={1.5} />
-                      <span className="eyebrow">Default — Home</span>
+                    <div className="mt-8 flex items-center justify-between border-t border-sand pt-6">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setEditName(user.name);
+                          setEditPhone(user.phone || '');
+                          setIsEditingDetails(true);
+                        }}
+                      >
+                        Edit Details
+                      </Button>
+                      <Link
+                        to="/auth"
+                        className="text-xs uppercase tracking-wider text-clay underline underline-offset-4 hover:text-ink"
+                      >
+                        Reset Password
+                      </Link>
                     </div>
-                    {addressSaved && (
-                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                        <CheckIcon className="h-3.5 w-3.5" /> Saved
-                      </span>
-                    )}
-                  </div>
-
-                  {isEditingAddress ? (
-                    <form onSubmit={handleSaveAddress} className="mt-5 space-y-4">
-                      <div>
-                        <label className="eyebrow block text-bark mb-1.5">Street Address</label>
-                        <input
-                          type="text"
-                          value={editAddress}
-                          onChange={(e) => setEditAddress(e.target.value)}
-                          placeholder="e.g. Flat 4B, House 27, Road 11"
-                          required
-                          className="h-10 w-full border border-sand bg-white px-3 text-sm text-ink focus:border-ink focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="eyebrow block text-bark mb-1.5">City</label>
-                        <input
-                          type="text"
-                          value={editCity}
-                          onChange={(e) => setEditCity(e.target.value)}
-                          placeholder="e.g. Dhaka"
-                          required
-                          className="h-10 w-full border border-sand bg-white px-3 text-sm text-ink focus:border-ink focus:outline-none"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          type="submit"
-                          className="bg-ink px-4 py-2 text-[10px] uppercase tracking-widest text-cream hover:bg-clay"
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditingAddress(false)}
-                          className="border border-sand px-3 py-2 text-[10px] uppercase tracking-widest text-smoke"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <p className="mt-5 text-sm leading-relaxed text-ink">
-                        {user.address ? `${user.address}, ${user.city || 'Dhaka'}` : 'No address saved yet'}
-                      </p>
-                      <p className="mt-3 text-sm text-smoke">{user.phone || '—'}</p>
-                      <div className="mt-7 flex gap-4 text-[11px] uppercase tracking-widest">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditAddress(user.address || '');
-                            setEditCity(user.city || 'Dhaka');
-                            setIsEditingAddress(true);
-                          }}
-                          className="text-ink underline underline-offset-4 hover:text-clay"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {!isEditingAddress && !user.address && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditAddress('');
-                      setEditCity('Dhaka');
-                      setIsEditingAddress(true);
-                    }}
-                    className="flex flex-col items-center justify-center gap-3 border border-dashed border-dune p-7 text-smoke transition-colors duration-200 ease-soft hover:border-ink hover:text-ink"
-                  >
-                    <PackageIcon className="h-5 w-5" strokeWidth={1.5} />
-                    <span className="text-[11px] uppercase tracking-widest">Add a new address</span>
-                  </button>
+                  </>
                 )}
               </div>
             )}
