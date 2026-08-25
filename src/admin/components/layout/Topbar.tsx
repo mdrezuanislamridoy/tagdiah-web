@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -28,37 +28,8 @@ interface NotificationItem {
   at: string;
   link: string;
   tone: string;
+  read?: boolean;
 }
-
-const fallbackNotifications: NotificationItem[] = [
-  {
-    id: 'n-1',
-    type: 'order',
-    title: 'New order TGD-10482',
-    meta: 'Nusrat Jahan · ৳9,320 · COD',
-    at: '9 min ago',
-    link: '/admin/orders',
-    tone: 'text-brown',
-  },
-  {
-    id: 'n-2',
-    type: 'stock',
-    title: 'Low stock: Zari Porda',
-    meta: 'Only 2 units remaining',
-    at: '1 hr ago',
-    link: '/admin/inventory',
-    tone: 'text-gold',
-  },
-  {
-    id: 'n-3',
-    type: 'review',
-    title: 'Reviews awaiting approval',
-    meta: 'Porda & Ceramic Vase Set',
-    at: '2 hrs ago',
-    link: '/admin/reviews',
-    tone: 'text-terracotta',
-  },
-];
 
 const panel =
   'absolute right-0 top-[calc(100%+8px)] z-40 rounded-xl border border-line bg-surface shadow-pop overflow-hidden';
@@ -69,34 +40,66 @@ const motionProps = {
   transition: { duration: 0.16, ease: [0.23, 1, 0.32, 1] as [number, number, number, number] },
 };
 
+const READ_KEY = 'tagdiah_read_notification_ids';
+
 export function Topbar({ onLogout }: { onLogout: () => void }) {
   const { user } = useAuth();
   const [open, setOpen] = useState<'quick' | 'bell' | 'profile' | null>(null);
   const [query, setQuery] = useState('');
-  const [notifications, setNotifications] = useState<NotificationItem[]>(fallbackNotifications);
-  const [unreadCount, setUnreadCount] = useState(3);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   /* Load dynamic notifications from backend */
-  const loadNotifications = () => {
+  const loadNotifications = useCallback(() => {
+    let locallyReadIds: string[] = [];
+    try {
+      locallyReadIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+    } catch {}
+
     api
-      .get<NotificationItem[]>('/notifications')
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setNotifications(data);
-          setUnreadCount(data.length);
+      .get<{ unreadCount?: number; notifications?: NotificationItem[] } | NotificationItem[]>(
+        '/notifications'
+      )
+      .then((res) => {
+        let items: NotificationItem[] = [];
+        if (Array.isArray(res)) {
+          items = res;
+        } else if (res?.notifications && Array.isArray(res.notifications)) {
+          items = res.notifications;
+        }
+
+        if (items.length > 0) {
+          const processed = items.map((n) => ({
+            ...n,
+            read: n.read || locallyReadIds.includes(n.id),
+          }));
+          setNotifications(processed);
+          const unread = processed.filter((n) => !n.read).length;
+          setUnreadCount(unread);
         }
       })
       .catch(() => {});
-  };
-
-  useEffect(() => {
-    loadNotifications();
-    const timer = setInterval(loadNotifications, 30000); // 30s auto-refresh
-    return () => clearInterval(timer);
   }, []);
 
+  /* Fast polling for real-time order alerts */
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 3000); // 3 seconds fast real-time polling
+
+    const handleStorage = () => loadNotifications();
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('tagdiah_order_event', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('tagdiah_order_event', handleStorage);
+    };
+  }, [loadNotifications]);
+
+  /* Outside click listener */
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null);
@@ -108,6 +111,44 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
   const go = (to: string) => {
     setOpen(null);
     navigate(to);
+  };
+
+  const handleNotificationClick = async (n: NotificationItem) => {
+    // 1. Mark as read locally
+    try {
+      const readIds = JSON.parse(localStorage.getItem(READ_KEY) || '[]');
+      if (!readIds.includes(n.id)) {
+        readIds.push(n.id);
+        localStorage.setItem(READ_KEY, JSON.stringify(readIds));
+      }
+    } catch {}
+
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+    );
+    setUnreadCount((c) => Math.max(0, c - 1));
+
+    // 2. Call backend to persist read status
+    try {
+      await api.patch(`/notifications/${n.id}/read`, {});
+    } catch {}
+
+    // 3. Navigate
+    go(n.link);
+  };
+
+  const markAllRead = async () => {
+    try {
+      const allIds = notifications.map((n) => n.id);
+      localStorage.setItem(READ_KEY, JSON.stringify(allIds));
+    } catch {}
+
+    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+    setUnreadCount(0);
+
+    try {
+      await api.post('/notifications/read-all', {});
+    } catch {}
   };
 
   const getIcon = (type: NotificationItem['type']) => {
@@ -123,10 +164,6 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
       default:
         return BellIcon;
     }
-  };
-
-  const markAllRead = () => {
-    setUnreadCount(0);
   };
 
   return (
@@ -195,7 +232,7 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
           >
             <BellIcon className="h-[18px] w-[18px]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-surface">
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-surface animate-pulse">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -203,12 +240,16 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
           <AnimatePresence>
             {open === 'bell' ? (
               <motion.div {...motionProps} className={`${panel} w-84 sm:w-96`}>
-                <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                <div className="flex items-center justify-between border-b border-line px-4 py-3 bg-cream/20">
                   <div className="flex items-center gap-2">
                     <p className="text-[13px] font-semibold text-ink">Notifications</p>
-                    {unreadCount > 0 && (
-                      <span className="rounded-full bg-gold-tint px-2 py-0.5 text-[11px] font-medium text-gold">
-                        {unreadCount} new
+                    {unreadCount > 0 ? (
+                      <span className="rounded-full bg-danger-tint border border-danger/30 px-2 py-0.5 text-[11px] font-semibold text-danger">
+                        {unreadCount} unread
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-sage-tint px-2 py-0.5 text-[11px] font-medium text-sage">
+                        All read
                       </span>
                     )}
                   </div>
@@ -216,31 +257,53 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
                     <button
                       type="button"
                       onClick={markAllRead}
-                      className="text-[11.5px] text-brown hover:underline"
+                      className="text-[11.5px] font-medium text-brown hover:underline"
                     >
                       Mark all as read
                     </button>
                   )}
                 </div>
 
-                <ul className="max-h-80 divide-y divide-line overflow-y-auto">
-                  {notifications.map((n) => {
-                    const IconComp = getIcon(n.type);
-                    return (
-                      <li
-                        key={n.id}
-                        onClick={() => go(n.link)}
-                        className="flex cursor-pointer gap-3 px-4 py-3 transition-colors hover:bg-cream/60"
-                      >
-                        <IconComp className={`mt-0.5 h-4 w-4 shrink-0 ${n.tone}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-ink">{n.title}</p>
-                          <p className="truncate text-xs text-ink-50">{n.meta}</p>
-                          <p className="mt-1 text-[11px] text-ink-30">{n.at}</p>
-                        </div>
-                      </li>
-                    );
-                  })}
+                <ul className="max-h-84 divide-y divide-line overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <li className="p-8 text-center text-xs text-ink-50">
+                      No notifications yet. New orders and alerts will appear here in real-time.
+                    </li>
+                  ) : (
+                    notifications.map((n) => {
+                      const IconComp = getIcon(n.type);
+                      const isUnread = !n.read;
+                      return (
+                        <li
+                          key={n.id}
+                          onClick={() => handleNotificationClick(n)}
+                          className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
+                            isUnread ? 'bg-cream/50 hover:bg-cream' : 'hover:bg-cream/30 opacity-75'
+                          }`}
+                        >
+                          <span className="relative mt-0.5">
+                            <IconComp className={`h-4 w-4 shrink-0 ${n.tone}`} />
+                            {isUnread && (
+                              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-terracotta ring-1 ring-surface" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-1">
+                              <p
+                                className={`truncate text-[13px] ${
+                                  isUnread ? 'font-semibold text-ink' : 'font-normal text-ink-70'
+                                }`}
+                              >
+                                {n.title}
+                              </p>
+                              <span className="text-[10.5px] text-ink-30 shrink-0">{n.at}</span>
+                            </div>
+                            <p className="truncate text-xs text-ink-50 mt-0.5">{n.meta}</p>
+                          </div>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
 
                 <button
@@ -252,7 +315,7 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
                   className="flex w-full items-center justify-center gap-1.5 border-t border-line bg-cream/50 py-2.5 text-[12px] font-medium text-brown hover:bg-cream"
                 >
                   <CheckCheckIcon className="h-3.5 w-3.5" />
-                  Dismiss alerts
+                  Dismiss & mark all as read
                 </button>
               </motion.div>
             ) : null}
