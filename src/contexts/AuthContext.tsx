@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api, setToken, clearToken, getToken } from '../utils/api';
 
 /* ── Types ── */
 export type UserRole = 'customer' | 'admin';
@@ -11,6 +12,8 @@ export interface AuthUser {
   since: string;          // e.g. "August 2026"
   phone?: string;
   address?: string;
+  avatar?: string;
+  department?: string;
 }
 
 interface AuthValue {
@@ -27,161 +30,132 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-/* ── Simulated users DB (replace with API calls) ── */
-const USERS_KEY = 'tagdiah_users';
-const SESSION_KEY = 'tagdiah_session';
+/* ── API response types ── */
+interface AuthResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    department?: string;
+    since?: string;
+  };
+}
 
-interface StoredUser {
+interface ProfileResponse {
   id: string;
   name: string;
   email: string;
-  password: string;
-  role: UserRole;
-  since: string;
+  role: string;
   phone?: string;
   address?: string;
+  avatar?: string;
+  department?: string;
+  since?: string;
 }
 
-/* seed the default admin & demo customer */
-function getStoredUsers(): StoredUser[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-
-  const seed: StoredUser[] = [
-    {
-      id: 'admin-001',
-      name: 'Tagdiah Admin',
-      email: 'admin@tagdiah.com',
-      password: 'admin123',
-      role: 'admin',
-      since: 'January 2024',
-    },
-    {
-      id: 'u-001',
-      name: 'Nusrat Jahan',
-      email: 'nusrat@example.com',
-      password: 'customer123',
-      role: 'customer',
-      since: 'March 2024',
-      phone: '+880 1712 004 118',
-      address: 'Flat 4B, House 27, Road 11, Dhanmondi, Dhaka 1209',
-    },
-  ];
-  localStorage.setItem(USERS_KEY, JSON.stringify(seed));
-  return seed;
+/** Normalize a role string from the backend to our frontend UserRole type */
+function normalizeRole(role: string): UserRole {
+  const adminRoles = ['Super Admin', 'Store Admin', 'Store Manager', 'Support Agent'];
+  return adminRoles.includes(role) ? 'admin' : 'customer';
 }
 
-function saveStoredUsers(users: StoredUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+function toAuthUser(data: AuthResponse['user'] | ProfileResponse): AuthUser {
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    role: normalizeRole(data.role),
+    since: data.since || '',
+    phone: data.phone,
+    address: data.address,
+    avatar: data.avatar,
+    department: data.department,
+  };
 }
-
-function toAuthUser(u: StoredUser): AuthUser {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, since: u.since, phone: u.phone, address: u.address };
-}
-
-const monthNames = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
 
 /* ── Provider ── */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* restore session on mount */
+  /* restore session on mount — validate JWT with /auth/me */
   useEffect(() => {
-    try {
-      const session = localStorage.getItem(SESSION_KEY);
-      if (session) {
-        const parsed: AuthUser = JSON.parse(session);
-        setUser(parsed);
-      }
-    } catch { /* ignore */ }
-    setIsLoading(false);
-  }, []);
-
-  /* persist session changes */
-  const persistUser = useCallback((u: AuthUser | null) => {
-    setUser(u);
-    if (u) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(u));
-    } else {
-      localStorage.removeItem(SESSION_KEY);
+    const token = getToken();
+    if (!token) {
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  /* simulate async delay */
-  const delay = () => new Promise<void>((r) => setTimeout(r, 800));
+    api.get<ProfileResponse>('/auth/me')
+      .then((profile) => {
+        setUser(toAuthUser(profile));
+      })
+      .catch(() => {
+        // Token invalid or expired
+        clearToken();
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
 
   /* ── Login (customers) ── */
   const login = useCallback(async (email: string, password: string) => {
-    await delay();
-    const users = getStoredUsers();
-    const found = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.role === 'customer'
-    );
-    if (!found) return { success: false, error: 'Invalid email or password.' };
-    persistUser(toAuthUser(found));
-    return { success: true };
-  }, [persistUser]);
+    try {
+      const data = await api.post<AuthResponse>('/auth/login', { email, password });
+      setToken(data.accessToken);
+      setUser(toAuthUser(data.user));
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed.';
+      return { success: false, error: message };
+    }
+  }, []);
 
   /* ── Admin Login ── */
   const adminLogin = useCallback(async (email: string, password: string) => {
-    await delay();
-    const users = getStoredUsers();
-    const found = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.role === 'admin'
-    );
-    if (!found) return { success: false, error: 'Invalid admin credentials.' };
-    persistUser(toAuthUser(found));
-    return { success: true };
-  }, [persistUser]);
+    try {
+      const data = await api.post<AuthResponse>('/auth/admin/login', { email, password });
+      setToken(data.accessToken);
+      setUser(toAuthUser(data.user));
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed.';
+      return { success: false, error: message };
+    }
+  }, []);
 
   /* ── Signup ── */
   const signup = useCallback(async (name: string, email: string, password: string) => {
-    await delay();
-    const users = getStoredUsers();
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { success: false, error: 'An account with this email already exists.' };
+    try {
+      const data = await api.post<AuthResponse>('/auth/register', { name, email, password });
+      setToken(data.accessToken);
+      setUser(toAuthUser(data.user));
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Signup failed.';
+      return { success: false, error: message };
     }
-    const now = new Date();
-    const newUser: StoredUser = {
-      id: `u-${Date.now()}`,
-      name,
-      email,
-      password,
-      role: 'customer',
-      since: `${monthNames[now.getMonth()]} ${now.getFullYear()}`,
-    };
-    users.push(newUser);
-    saveStoredUsers(users);
-    persistUser(toAuthUser(newUser));
-    return { success: true };
-  }, [persistUser]);
+  }, []);
 
   /* ── Logout ── */
   const logout = useCallback(() => {
-    persistUser(null);
-  }, [persistUser]);
+    clearToken();
+    setUser(null);
+  }, []);
 
-  /* ── Update profile ── */
+  /* ── Update profile (optimistic local + persist to backend) ── */
   const updateProfile = useCallback((data: Partial<Pick<AuthUser, 'name' | 'phone' | 'address'>>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const updated = { ...prev, ...data };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
-      /* also update stored users */
-      const users = getStoredUsers();
-      const idx = users.findIndex((u) => u.id === prev.id);
-      if (idx > -1) {
-        users[idx] = { ...users[idx], ...data };
-        saveStoredUsers(users);
-      }
-      return updated;
+      return { ...prev, ...data };
     });
+    // Note: profile update API endpoint can be added later
   }, []);
 
   const value = useMemo<AuthValue>(
