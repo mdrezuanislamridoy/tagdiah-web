@@ -16,6 +16,7 @@ import {
   StarIcon,
   MailIcon,
   CheckCheckIcon,
+  MenuIcon,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { api } from '../../../utils/api';
@@ -42,7 +43,12 @@ const motionProps = {
 
 const READ_KEY = 'tagdiah_read_notification_ids';
 
-export function Topbar({ onLogout }: { onLogout: () => void }) {
+interface TopbarProps {
+  onLogout: () => void;
+  onOpenMobileMenu?: () => void;
+}
+
+export function Topbar({ onLogout, onOpenMobileMenu }: TopbarProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState<'quick' | 'bell' | 'profile' | null>(null);
   const [query, setQuery] = useState('');
@@ -168,6 +174,17 @@ export function Topbar({ onLogout }: { onLogout: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur-md lg:px-6">
+      {onOpenMobileMenu && (
+        <button
+          type="button"
+          onClick={onOpenMobileMenu}
+          aria-label="Open admin navigation menu"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-70 transition-colors hover:bg-cream hover:text-ink lg:hidden shrink-0"
+        >
+          <MenuIcon className="h-5 w-5" strokeWidth={1.5} />
+        </button>
+      )}
+
       {/* Global Search Bar */}
       <div className="relative hidden max-w-md flex-1 md:block">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-30" />

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheckIcon,
   TruckIcon,
@@ -8,6 +8,7 @@ import {
   BanknoteIcon,
   SmartphoneIcon,
   Loader2Icon,
+  ShoppingBagIcon,
 } from 'lucide-react';
 import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,6 +68,12 @@ export function Checkout() {
   const { cart, totals, clearCart, productById } = useStore();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  /* Check if user came via "Buy It Now" for a single specific item */
+  const buyNowItem = location.state?.buyNowItem;
+  const isBuyNow = Boolean(buyNowItem);
+
   const [payment, setPayment] = useState('cod');
   const [delivery, setDelivery] = useState('standard');
   const [deliveryOptions, setDeliveryOptions] = useState([
@@ -76,6 +83,49 @@ export function Checkout() {
   ]);
   const [freeThreshold, setFreeThreshold] = useState(5000);
   const [submitting, setSubmitting] = useState(false);
+
+  /* Compute active items for checkout (Single Buy Now item OR Cart items) */
+  const activeItems = useMemo(() => {
+    if (buyNowItem) {
+      return [
+        {
+          productId: buyNowItem.productId,
+          name: buyNowItem.name,
+          image: buyNowItem.image,
+          color: buyNowItem.color,
+          size: buyNowItem.size,
+          quantity: buyNowItem.quantity || 1,
+          price: buyNowItem.price,
+        },
+      ];
+    }
+    return cart.map((line) => {
+      const product = productById(line.productId);
+      return {
+        productId: line.productId,
+        name: product?.name || 'Handcrafted Item',
+        image: product?.images?.[0] || product?.image,
+        variant: line.variant,
+        color: line.color,
+        size: line.size,
+        quantity: line.quantity,
+        price: product?.price || 0,
+      };
+    });
+  }, [buyNowItem, cart, productById]);
+
+  /* Compute subtotal and discount */
+  const checkoutSubtotal = useMemo(() => {
+    if (buyNowItem) {
+      return (buyNowItem.price || 0) * (buyNowItem.quantity || 1);
+    }
+    return totals.subtotal;
+  }, [buyNowItem, totals.subtotal]);
+
+  const checkoutDiscount = useMemo(() => {
+    if (buyNowItem) return 0;
+    return totals.discount;
+  }, [buyNowItem, totals.discount]);
 
   /* Load dynamic delivery settings from admin panel API */
   useEffect(() => {
@@ -92,7 +142,7 @@ export function Checkout() {
       .catch(() => {});
   }, []);
 
-  /* require login to checkout */
+  /* Require login to checkout */
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
@@ -101,9 +151,9 @@ export function Checkout() {
   const selectedOption = deliveryOptions.find((o) => o.id === delivery) || deliveryOptions[0];
   const isFreeDelivery =
     selectedOption.price === 0 ||
-    (selectedOption.id === 'standard' && totals.subtotal - totals.discount >= freeThreshold);
+    (selectedOption.id === 'standard' && checkoutSubtotal - checkoutDiscount >= freeThreshold);
   const currentDeliveryFee = isFreeDelivery ? 0 : selectedOption.price;
-  const grandTotal = Math.max(0, totals.subtotal - totals.discount + currentDeliveryFee);
+  const grandTotal = Math.max(0, checkoutSubtotal - checkoutDiscount + currentDeliveryFee);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -117,19 +167,16 @@ export function Checkout() {
     const city = String(data.get('city') ?? 'Dhaka');
     const notes = String(data.get('notes') ?? '');
 
-    const orderItems = cart.map((line) => {
-      const product = productById(line.productId);
-      return {
-        productId: line.productId,
-        name: product?.name || 'Handcrafted Item',
-        image: product?.images[0],
-        variant: line.variant,
-        color: line.color,
-        size: line.size,
-        qty: line.quantity,
-        price: product?.price || 0,
-      };
-    });
+    const orderItemsPayload = activeItems.map((it) => ({
+      productId: it.productId,
+      name: it.name,
+      image: it.image,
+      variant: it.size || it.color || 'Standard',
+      color: it.color,
+      size: it.size,
+      qty: it.quantity,
+      price: it.price,
+    }));
 
     try {
       const createdOrder = await api.post<{ orderNumber: string }>('/orders', {
@@ -139,16 +186,19 @@ export function Checkout() {
         address,
         city,
         notes: notes || undefined,
-        items: orderItems,
-        subtotal: totals.subtotal,
-        discount: totals.discount,
+        items: orderItemsPayload,
+        subtotal: checkoutSubtotal,
+        discount: checkoutDiscount,
         delivery: currentDeliveryFee,
         total: grandTotal,
         payment: 'Unpaid',
         method: 'COD',
       });
 
-      clearCart();
+      // Clear main cart ONLY if this was a cart-wide checkout
+      if (!isBuyNow) {
+        clearCart();
+      }
 
       navigate('/order-confirmation', {
         state: {
@@ -160,10 +210,10 @@ export function Checkout() {
             address,
             city,
           },
-          items: cart,
+          items: activeItems,
           totals: {
-            subtotal: totals.subtotal,
-            discount: totals.discount,
+            subtotal: checkoutSubtotal,
+            discount: checkoutDiscount,
             delivery: currentDeliveryFee,
             total: grandTotal,
           },
@@ -173,7 +223,9 @@ export function Checkout() {
       });
     } catch {
       // Fallback optimistic checkout
-      clearCart();
+      if (!isBuyNow) {
+        clearCart();
+      }
       navigate('/order-confirmation', {
         state: {
           orderNumber: 'TGD-' + Math.floor(100000 + Math.random() * 900000),
@@ -184,10 +236,10 @@ export function Checkout() {
             address,
             city,
           },
-          items: cart,
+          items: activeItems,
           totals: {
-            subtotal: totals.subtotal,
-            discount: totals.discount,
+            subtotal: checkoutSubtotal,
+            discount: checkoutDiscount,
             delivery: currentDeliveryFee,
             total: grandTotal,
           },
@@ -200,7 +252,7 @@ export function Checkout() {
     }
   };
 
-  if (cart.length === 0) {
+  if (activeItems.length === 0) {
     return (
       <div className="mx-auto max-w-shell px-5 py-24 text-center">
         <h1 className="font-display text-4xl font-light text-ink">Your cart is empty</h1>
@@ -218,7 +270,14 @@ export function Checkout() {
   return (
     <div className="mx-auto max-w-shell px-5 py-12 lg:px-8 lg:py-16">
       <div className="border-b border-sand pb-8">
-        <p className="eyebrow text-clay">Complete your order</p>
+        <div className="flex items-center gap-2">
+          <p className="eyebrow text-clay">Complete your order</p>
+          {isBuyNow && (
+            <span className="rounded bg-clay/10 px-2 py-0.5 text-[11px] font-medium text-clay border border-clay/30">
+              Direct Single Item Order
+            </span>
+          )}
+        </div>
         <h1 className="mt-2 font-display text-3xl font-light text-ink sm:text-4xl">Checkout</h1>
         <p className="mt-2 text-sm text-smoke">
           Secure checkout · Cash on Delivery available across Bangladesh
@@ -294,7 +353,7 @@ export function Checkout() {
               {deliveryOptions.map((option) => {
                 const optIsFree =
                   option.price === 0 ||
-                  (option.id === 'standard' && totals.subtotal - totals.discount >= freeThreshold);
+                  (option.id === 'standard' && checkoutSubtotal - checkoutDiscount >= freeThreshold);
 
                 return (
                   <label
@@ -379,42 +438,43 @@ export function Checkout() {
         {/* ── Order Summary Sidebar ── */}
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="border border-sand bg-warmwhite p-6 lg:p-8">
-            <h2 className="font-display text-xl font-light text-ink">Order summary</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-xl font-light text-ink">Order summary</h2>
+              <span className="text-xs font-mono text-smoke">
+                {activeItems.length} item{activeItems.length > 1 ? 's' : ''}
+              </span>
+            </div>
 
             <ul className="mt-6 divide-y divide-sand border-b border-t border-sand">
-              {cart.map((line) => {
-                const product = productById(line.productId);
-                if (!product) return null;
-                return (
-                  <li key={`${line.productId}-${line.variant}`} className="flex gap-4 py-4">
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="h-16 w-16 bg-sand/30 object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{product.name}</p>
-                      <p className="mt-0.5 text-xs text-smoke">
-                        Qty {line.quantity} · {line.size || line.color || 'Standard'}
-                      </p>
-                      <p className="mt-2 text-xs font-mono font-medium text-ink">
-                        {formatPrice(product.price * line.quantity)}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
+              {activeItems.map((line, idx) => (
+                <li key={`${line.productId}-${idx}`} className="flex gap-4 py-4">
+                  <img
+                    src={line.image}
+                    alt={line.name}
+                    className="h-16 w-16 bg-sand/30 object-cover border border-sand/50"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{line.name}</p>
+                    <p className="mt-0.5 text-xs text-smoke">
+                      Qty {line.quantity} · {line.size || line.color || 'Standard'}
+                    </p>
+                    <p className="mt-2 text-xs font-mono font-medium text-ink">
+                      {formatPrice(line.price * line.quantity)}
+                    </p>
+                  </div>
+                </li>
+              ))}
             </ul>
 
             <dl className="mt-6 space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-smoke">Subtotal</dt>
-                <dd className="font-mono text-ink">{formatPrice(totals.subtotal)}</dd>
+                <dd className="font-mono text-ink">{formatPrice(checkoutSubtotal)}</dd>
               </div>
-              {totals.discount > 0 && (
+              {checkoutDiscount > 0 && (
                 <div className="flex justify-between text-bark">
                   <dt>Promotional Discount</dt>
-                  <dd className="font-mono">−{formatPrice(totals.discount)}</dd>
+                  <dd className="font-mono">−{formatPrice(checkoutDiscount)}</dd>
                 </div>
               )}
               <div className="flex justify-between">

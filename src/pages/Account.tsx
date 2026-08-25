@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   HeartIcon,
@@ -18,6 +18,7 @@ import {
   SparklesIcon,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Button } from '../components/ui/Button';
 import { orders as initialOrders } from '../data/orders';
 import { productById } from '../data/products';
 import { cx, formatPrice } from '../utils/format';
@@ -631,7 +632,7 @@ export function Account() {
                         Edit Details
                       </Button>
                       <Link
-                        to="/auth"
+                        to={`/auth?mode=forgot&email=${encodeURIComponent(user.email)}`}
                         className="text-xs uppercase tracking-wider text-clay underline underline-offset-4 hover:text-ink"
                       >
                         Reset Password

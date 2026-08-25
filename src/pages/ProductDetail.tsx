@@ -94,8 +94,19 @@ export function ProductDetail() {
   };
 
   const buyNow = () => {
-    addToCart({ productId: product.id, quantity, color, size });
-    navigate('/checkout');
+    navigate('/checkout', {
+      state: {
+        buyNowItem: {
+          productId: product.id,
+          name: product.name,
+          image: product.images?.[0] || product.image,
+          color,
+          size,
+          quantity,
+          price: product.price,
+        },
+      },
+    });
   };
 
   return (
