@@ -95,6 +95,7 @@ export function Settings() {
     codEnabled: true,
     bkash: false,
     card: false,
+    allowDiscounts: true,
   });
 
   /* ── 5. Dynamic Tax Settings ── */
@@ -472,11 +473,21 @@ export function Settings() {
             </Card>
           ) : null}
 
-          {/* 4. PAYMENT METHODS */}
+          {/* 4. PAYMENT METHODS & PROMOTIONS */}
           {active === 'payment' ? (
             <Card>
-              <CardHeader title="Payment methods" subtitle="Choose what customers can pay with at checkout" />
+              <CardHeader title="Payment methods & Promotions" subtitle="Configure payment gateways and promo discount settings" />
               <div className="divide-y divide-line">
+                <div className="p-5">
+                  <Toggle
+                    checked={paymentSettings.allowDiscounts}
+                    onChange={() =>
+                      setPaymentSettings({ ...paymentSettings, allowDiscounts: !paymentSettings.allowDiscounts })
+                    }
+                    label="Enable Promo Coupons & Order Discounts"
+                    description="Allow customers to enter discount codes and redeem promo coupons at storefront checkout."
+                  />
+                </div>
                 <div className="p-5">
                   <Toggle
                     checked={paymentSettings.codEnabled}

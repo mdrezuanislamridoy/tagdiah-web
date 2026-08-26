@@ -16,12 +16,14 @@ export function Layout() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-cream">
       <ScrollToTop />
-      <AnnouncementBar />
-      <Header />
+      <div className="sticky top-0 z-50 w-full shadow-sm">
+        <AnnouncementBar />
+        <Header />
+      </div>
       <main className="flex-1">
         <Outlet />
       </main>
       <Footer />
-    </div>);
-
+    </div>
+  );
 }

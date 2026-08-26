@@ -350,6 +350,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const key = code.trim().toUpperCase();
       if (!key) return;
 
+      // Check if coupon has already been redeemed in local browser history
+      try {
+        const usedCoupons = JSON.parse(localStorage.getItem('tagdiah_used_coupons') || '[]');
+        if (Array.isArray(usedCoupons) && usedCoupons.includes(key)) {
+          setCoupon(null);
+          setCouponDetails(null);
+          setCouponError(`Coupon “${key}” has already been redeemed. This discount is valid for 1-time use only.`);
+          return;
+        }
+      } catch {}
+
       const currentSubtotal = cart.reduce((sum, line) => {
         const product = productById(line.productId);
         return sum + (product ? product.price * line.quantity : 0);
@@ -393,7 +404,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setCouponError(null);
   }, []);
 
-  const clearCart = useCallback(() => setCart([]), []);
+  const clearCart = useCallback(() => {
+    if (coupon) {
+      try {
+        const usedCoupons = JSON.parse(localStorage.getItem('tagdiah_used_coupons') || '[]');
+        if (!usedCoupons.includes(coupon)) {
+          usedCoupons.push(coupon);
+          localStorage.setItem('tagdiah_used_coupons', JSON.stringify(usedCoupons));
+        }
+      } catch {}
+    }
+    setCart([]);
+    setCoupon(null);
+    setCouponDetails(null);
+    setCouponError(null);
+  }, [coupon]);
 
   /* ── 5. Dynamic Totals Calculation ── */
   const totals = useMemo<OrderSummaryTotals>(() => {

@@ -22,9 +22,19 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState('');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  /* Detect scroll for sticky header elevation shadow */
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Exactly specified Nav Links: Home, All Products, New Arrivals, Most Rated, About Us, Contact
   const navLinks = useMemo(
@@ -98,7 +108,14 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-sand bg-cream/95 backdrop-blur w-full">
+      <header
+        className={cx(
+          'w-full border-b border-sand transition-all duration-200 ease-soft',
+          scrolled
+            ? 'bg-warmwhite/95 backdrop-blur-md shadow-md'
+            : 'bg-cream/95 backdrop-blur-sm shadow-none'
+        )}
+      >
         <div className="mx-auto flex h-14 sm:h-16 lg:h-20 max-w-shell items-center justify-between px-3 sm:px-5 lg:px-8">
           {/* Left: Mobile Hamburger & Logo */}
           <div className="flex items-center gap-2 min-w-0">
