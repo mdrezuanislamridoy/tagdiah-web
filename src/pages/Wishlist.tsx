@@ -1,15 +1,20 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { HeartIcon, XIcon } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Rating } from '../components/ui/Rating';
 import { useStore } from '../contexts/StoreContext';
+import { useAuth } from '../contexts/AuthContext';
 import { availabilityLabel, formatPrice } from '../utils/format';
 
 export function Wishlist() {
+  const { isAuthenticated } = useAuth();
   const { wishlist, toggleWishlist, addToCart, productById } = useStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth?redirect=/wishlist" replace />;
+  }
   const items = wishlist.map(productById).filter(Boolean);
 
   return (

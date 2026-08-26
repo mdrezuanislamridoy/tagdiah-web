@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { api } from '../utils/api';
+import { api, getToken } from '../utils/api';
 import type { CartLine, Category, OrderSummaryTotals, Product } from '../types';
 
 const CART_KEY = 'tagdiah_cart';
@@ -280,8 +280,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [products]
   );
 
-  /* ── 4. Cart & Wishlist Actions ── */
+  /* ── 4. Cart & Wishlist Actions (Login Guarded) ── */
   const addToCart = useCallback((line: CartLine) => {
+    if (!getToken()) {
+      window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
     setCart((prev) => {
       const idx = prev.findIndex(
         (item) =>
@@ -339,6 +343,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleWishlist = useCallback((productId: string) => {
+    if (!getToken()) {
+      window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
     setWishlist((prev) =>
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );

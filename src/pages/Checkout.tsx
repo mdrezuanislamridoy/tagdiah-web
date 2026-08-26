@@ -70,6 +70,11 @@ export function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  /* Guard: Unauthenticated users MUST sign in before placing orders */
+  if (!isAuthenticated) {
+    return <Navigate to="/auth?redirect=/checkout" replace />;
+  }
+
   /* Check if user came via "Buy It Now" for a single specific item */
   const buyNowItem = location.state?.buyNowItem;
   const isBuyNow = Boolean(buyNowItem);
