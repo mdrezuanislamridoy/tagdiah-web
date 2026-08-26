@@ -1,19 +1,22 @@
 const getApiBaseUrl = (): string => {
-  const envUrl =
+  let url =
     (import.meta as any).env?.VITE_API_URL ||
     (import.meta as any).env?.VITE_BACKEND_URL ||
     (import.meta as any).env?.REACT_APP_API_URL;
 
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-    return envUrl.trim().replace(/\/$/, '');
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+      url = 'https://tagdiah-backend.onrender.com';
+    } else {
+      url = 'http://localhost:5000';
+    }
   }
 
-  // Automatic production fallback when hosted on Vercel or live domains
-  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
-    return 'https://tagdiah-backend.onrender.com/api';
+  let cleanUrl = url.trim().replace(/\/$/, '');
+  if (!cleanUrl.endsWith('/api')) {
+    cleanUrl = `${cleanUrl}/api`;
   }
-
-  return 'http://localhost:5000/api';
+  return cleanUrl;
 };
 
 const API_BASE = getApiBaseUrl();
