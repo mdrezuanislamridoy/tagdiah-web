@@ -27,10 +27,12 @@ export function ReviewsSection({ product }: { product: Product }) {
   const [ratingInput, setRatingInput] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [authorInput, setAuthorInput] = useState(user?.name || '');
+  const [emailInput, setEmailInput] = useState(user?.email || '');
   const [titleInput, setTitleInput] = useState('');
   const [bodyInput, setBodyInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submittedMessage, setSubmittedMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   /* Load real reviews from backend */
   const loadProductReviews = () => {
@@ -83,10 +85,13 @@ export function ReviewsSection({ product }: { product: Product }) {
     if (!bodyInput.trim() || !authorInput.trim()) return;
 
     setSubmitting(true);
+    setErrorMessage(null);
+
     try {
       const payload = {
         productId: product.id || product.slug,
         author: authorInput.trim(),
+        email: emailInput.trim() || user?.email,
         rating: ratingInput,
         title: titleInput.trim() || 'Verified Customer Review',
         body: bodyInput.trim(),
@@ -114,20 +119,10 @@ export function ReviewsSection({ product }: { product: Product }) {
         setTitleInput('');
         setBodyInput('');
       }, 1800);
-    } catch {
-      // Offline fallback
-      const newReview: Review = {
-        id: `rev-${Date.now()}`,
-        author: authorInput.trim(),
-        location: user?.city || 'Dhaka, BD',
-        rating: ratingInput,
-        date: 'Just now',
-        title: titleInput.trim() || 'Verified Customer Review',
-        body: bodyInput.trim(),
-        verified: true,
-      };
-      setReviewsList((prev) => [newReview, ...prev]);
-      setModalOpen(false);
+    } catch (err: any) {
+      setErrorMessage(
+        err?.message || 'Only verified buyers who have purchased this product can leave a review.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -242,6 +237,27 @@ export function ReviewsSection({ product }: { product: Product }) {
                   <h2 className="mt-1 font-display text-2xl font-light text-ink">
                     Review {product.name}
                   </h2>
+                </div>
+
+                {errorMessage && (
+                  <div className="rounded border border-rose-300 bg-rose-50 p-3.5 text-xs text-rose-800 leading-relaxed font-medium">
+                    ⚠️ {errorMessage}
+                  </div>
+                )}
+
+                {/* Email Input for Purchase Verification */}
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-smoke mb-1.5">
+                    Order Email (For Purchase Verification)
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="The email address used during order checkout"
+                    className="w-full border border-sand bg-cream/40 px-3.5 py-2.5 text-sm text-ink focus:border-ink focus:outline-none"
+                  />
                 </div>
 
                 {/* Rating Picker */}
