@@ -46,7 +46,7 @@ export function Inventory() {
             id: p.id,
             name: p.name,
             sku: p.sku || 'TGD-PRD',
-            slug: p.slug,
+            slug: p.slug || 'product',
             category: p.category?.name || 'Decor',
             subcategory: 'Handcrafted',
             price: p.price,
@@ -56,8 +56,15 @@ export function Inventory() {
             image: img,
             images: [img],
             updatedAt: p.updatedAt ? p.updatedAt.split('T')[0] : '2026-08-25',
+            featured: true,
             rating: 4.9,
+            reviewCount: 12,
             reviewsCount: 12,
+            sold: 50,
+            description: p.description || '',
+            seoTitle: p.name || '',
+            seoDescription: p.description || '',
+            variations: [],
           };
         });
         setItems(mapped);
@@ -110,6 +117,7 @@ export function Inventory() {
       // Add to movement history
       const newMovement = {
         id: `m-${Date.now()}`,
+        sku: adjusting.sku || 'SKU-00',
         product: adjusting.name,
         change: delta,
         reason,

@@ -10,20 +10,20 @@ const channels = [
   {
     icon: PhoneIcon,
     title: 'Call or WhatsApp',
-    body: '+880 1712 004 118',
+    body: '01332-131386',
     note: 'Saturday to Thursday, 10am – 8pm',
   },
   {
     icon: MailIcon,
     title: 'Email',
-    body: 'hello@tagdiah.com',
+    body: 'tagdiah.bd@gmail.com',
     note: 'We reply within one working day',
   },
   {
     icon: MapPinIcon,
     title: 'Visit the studio',
-    body: 'House 12, Road 27, Banani, Dhaka 1213',
-    note: 'Open to walk-ins Friday 11am – 6pm',
+    body: 'Dewgaon, Rajashion, Savar, Dhaka 1340, Bangladesh',
+    note: 'Open to walk-ins Saturday to Thursday 10am – 7pm',
   },
 ];
 
@@ -101,7 +101,7 @@ export function Contact() {
               <h2 className="mt-6 font-display text-3xl font-light text-ink">Message received</h2>
               <p className="mt-3 max-w-md text-[15px] leading-relaxed text-smoke">
                 Thank you — someone from the studio will reply to you within one working day. If it
-                is urgent, WhatsApp us on +880 1712 004 118.
+                is urgent, WhatsApp us on 01332-131386.
               </p>
               <Button variant="secondary" className="mt-8" onClick={() => setState('idle')}>
                 Send another message

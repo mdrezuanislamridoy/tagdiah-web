@@ -56,6 +56,8 @@ export function Shop() {
 
     if (routeCategory === 'new-arrivals') {
       list = list.filter((p) => p.newArrival || p.badge === 'New Arrival');
+    } else if (routeCategory === 'top-rated' || routeCategory === 'most-rated') {
+      list.sort((a, b) => b.rating - a.rating || (b.reviewCount || 0) - (a.reviewCount || 0));
     } else if (routeCategory) {
       list = list.filter((p) => p.category === routeCategory);
     }
@@ -111,14 +113,44 @@ export function Shop() {
   return (
     <>
       <PageHeader
-        eyebrow={category ? category.tagline : 'The full collection'}
-        title={category ? category.name : 'Shop all pieces'}
-        intro={
-        category ?
-        category.description :
-        'Every handmade piece we currently have in the studio — wall décor, door porda, accessories and one-off decorative arts.'
+        eyebrow={
+          routeCategory === 'new-arrivals'
+            ? 'Fresh from studio'
+            : routeCategory === 'top-rated' || routeCategory === 'most-rated'
+            ? 'Customer Favorites'
+            : category
+            ? category.tagline
+            : 'The full collection'
         }
-        crumbs={[{ label: 'Shop', to: '/shop' }, ...(category ? [{ label: category.name }] : [])]} />
+        title={
+          routeCategory === 'new-arrivals'
+            ? 'New Arrivals'
+            : routeCategory === 'top-rated' || routeCategory === 'most-rated'
+            ? 'Most Rated'
+            : category
+            ? category.name
+            : 'Shop all pieces'
+        }
+        intro={
+          routeCategory === 'new-arrivals'
+            ? 'Discover our latest handcrafted home décor, brass accents, and custom textile additions.'
+            : routeCategory === 'top-rated' || routeCategory === 'most-rated'
+            ? 'Explore our highest rated and most beloved pieces, reviewed and recommended by our customers.'
+            : category
+            ? category.description
+            : 'Every handmade piece we currently have in the studio — wall décor, door porda, accessories and one-off decorative arts.'
+        }
+        crumbs={[
+          { label: 'Shop', to: '/shop' },
+          ...(routeCategory === 'new-arrivals'
+            ? [{ label: 'New Arrivals' }]
+            : routeCategory === 'top-rated' || routeCategory === 'most-rated'
+            ? [{ label: 'Most Rated' }]
+            : category
+            ? [{ label: category.name }]
+            : []),
+        ]}
+      />
       
 
       <div className="mx-auto max-w-shell px-5 py-12 lg:px-8 lg:py-16">

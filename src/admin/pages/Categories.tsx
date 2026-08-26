@@ -56,7 +56,7 @@ export function Categories() {
 
   const openEdit = (c: Category) => {
     setEditing(c);
-    setDraft({ name: c.name, slug: c.slug || '', parent: c.parent ?? 'None (top level)', status: c.status, description: c.description });
+    setDraft({ name: c.name, slug: c.slug || '', parent: c.parent ?? 'None (top level)', status: c.status || 'Active', description: c.description || '' });
     setError('');
     setOpen(true);
   };
@@ -122,7 +122,7 @@ export function Categories() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-display text-[17px] text-ink">{parent.name}</h2>
-                      <StatusPill status={parent.status} />
+                      <StatusPill status={parent.status || 'Active'} />
                     </div>
                     <p className="mt-0.5 truncate text-[13px] text-ink-50">{parent.description}</p>
                   </div>
@@ -154,7 +154,7 @@ export function Categories() {
                           <p className="truncate text-[12px] text-ink-50">{c.description}</p>
                         </div>
                         <span className="text-[13px] text-ink-50">{c.products} products</span>
-                        <StatusPill status={c.status} />
+                        <StatusPill status={c.status || 'Active'} />
                         <div className="flex gap-1.5">
                           <IconButton label={`Edit ${c.name}`} icon={PencilIcon} onClick={() => openEdit(c)} />
                           <IconButton

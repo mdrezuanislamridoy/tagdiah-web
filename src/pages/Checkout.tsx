@@ -51,16 +51,16 @@ const payments = [
   {
     id: 'bkash',
     label: 'bKash / Nagad',
-    body: 'Direct mobile wallet checkout (Coming soon)',
+    body: 'Pay via bKash or Nagad mobile merchant wallet',
     icon: SmartphoneIcon,
-    available: false,
+    available: true,
   },
   {
     id: 'card',
     label: 'Debit / Credit Card',
-    body: 'Visa, Mastercard, Amex (Coming soon)',
+    body: 'Pay securely with Visa, Mastercard, or Amex',
     icon: CreditCardIcon,
-    available: false,
+    available: true,
   },
 ];
 
@@ -104,8 +104,8 @@ export function Checkout() {
       return {
         productId: line.productId,
         name: product?.name || 'Handcrafted Item',
-        image: product?.images?.[0] || product?.image,
-        variant: line.variant,
+        image: product?.images?.[0] || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800',
+        variant: line.color && line.size ? `${line.color} / ${line.size}` : line.color || line.size || null,
         color: line.color,
         size: line.size,
         quantity: line.quantity,

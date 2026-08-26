@@ -70,20 +70,23 @@ export function OrderDetail() {
             courier: o.courier || 'Pathao Courier',
             tracking: o.tracking || 'PT-Live',
             timeline: [
-              { label: 'Order placed', at: o.createdAt ? shortDate(o.createdAt.split('T')[0]) : 'Today', done: true },
+              { label: 'Order placed', at: o.createdAt ? shortDate(o.createdAt.split('T')[0]) : 'Today', note: 'Order submitted by customer', done: true },
               {
                 label: 'Order confirmed',
                 at: ['Confirmed', 'Processing', 'Shipped', 'Delivered'].includes(o.status) ? 'Confirmed' : 'Pending',
+                note: 'Order details verified',
                 done: ['Confirmed', 'Processing', 'Shipped', 'Delivered'].includes(o.status),
               },
               {
                 label: 'Packed & handed to courier',
                 at: ['Shipped', 'Delivered'].includes(o.status) ? 'Handed over' : 'Pending',
+                note: 'Dispatched via Pathao Courier',
                 done: ['Shipped', 'Delivered'].includes(o.status),
               },
               {
                 label: 'Out for delivery',
                 at: o.status === 'Delivered' ? 'Delivered' : 'In transit',
+                note: 'Package out for doorstep delivery',
                 done: o.status === 'Delivered',
               },
             ],

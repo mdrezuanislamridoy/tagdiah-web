@@ -1,14 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { PackageIcon, RotateCcwIcon, TruckIcon } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
-
-const zones = [
-{ zone: 'Inside Dhaka', time: '1–2 working days', cost: '৳120 · free over ৳5,000' },
-{ zone: 'Outside Dhaka', time: '3–5 working days', cost: '৳180 · free over ৳5,000' },
-{ zone: 'Studio pickup — Banani', time: 'Ready in 24 hours', cost: 'Free' },
-{ zone: 'International (DHL)', time: '7–12 working days', cost: 'Calculated at checkout' }];
-
+import { useStore } from '../contexts/StoreContext';
 
 const sections = [
 {
@@ -24,7 +18,7 @@ const sections = [
   icon: RotateCcwIcon,
   title: 'Returns',
   paragraphs: [
-  'You have seven days from delivery to return an unused piece in its original packaging for a full refund. Start the return from My Orders, or write to hello@tagdiah.com with your order number.',
+  'You have seven days from delivery to return an unused piece in its original packaging for a full refund. Start the return from My Orders, or write to tagdiah.bd@gmail.com with your order number.',
   'Refunds are issued to the original payment method within five working days of the piece arriving back at the studio. Cash-on-delivery orders are refunded by bKash or bank transfer.',
   'Made-to-order and custom-sized pieces cannot be returned unless they arrive damaged or differ from what was confirmed with you.']
 
@@ -38,8 +32,26 @@ const sections = [
 
 }];
 
-
 export function ShippingReturns() {
+  const { deliverySettings } = useStore();
+
+  const zones = useMemo(
+    () => [
+      {
+        zone: 'Inside Dhaka',
+        time: '1–2 working days',
+        cost: `৳${deliverySettings.insideDhakaFee} · free over ৳${deliverySettings.freeDeliveryThreshold.toLocaleString()}`,
+      },
+      {
+        zone: 'Outside Dhaka',
+        time: '3–5 working days',
+        cost: `৳${deliverySettings.outsideDhakaFee} · free over ৳${deliverySettings.freeDeliveryThreshold.toLocaleString()}`,
+      },
+      { zone: 'Studio pickup — Savar', time: 'Ready in 24 hours', cost: 'Free' },
+      { zone: 'International (DHL)', time: '7–12 working days', cost: 'Calculated at checkout' },
+    ],
+    [deliverySettings]
+  );
   return (
     <>
       <PageHeader

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -10,41 +10,51 @@ import {
   XIcon,
   LogOutIcon,
   ShieldIcon,
+  UserIcon,
 } from 'lucide-react';
 import { useStore } from '../../contexts/StoreContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { cx, formatPrice } from '../../utils/format';
 
 export function Header() {
-  const { cartCount, wishlistCount, categories, searchProducts } = useStore();
+  const { cartCount, wishlistCount, searchProducts } = useStore();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const navLinks = useMemo(() => {
-    const base = [{ label: 'Shop All', to: '/shop' }];
-    if (categories && categories.length > 0) {
-      categories.slice(0, 4).forEach((c) => {
-        base.push({ label: c.name, to: `/shop/${c.slug}` });
-      });
-    } else {
-      base.push(
-        { label: 'Wall Art & Canvas', to: '/shop/wall-art' },
-        { label: 'Home Accents & Brass', to: '/shop/accents' },
-        { label: 'Curtains & Textiles', to: '/shop/textiles' }
-      );
-    }
-    base.push({ label: 'New Arrivals', to: '/shop/new-arrivals' }, { label: 'About Us', to: '/about' });
-    return base;
-  }, [categories]);
+  // Exactly specified Nav Links: Home, All Products, New Arrivals, Most Rated, About Us, Contact
+  const navLinks = useMemo(
+    () => [
+      { label: 'Home', to: '/' },
+      { label: 'All Products', to: '/shop' },
+      { label: 'New Arrivals', to: '/shop/new-arrivals' },
+      { label: 'Most Rated', to: '/shop/top-rated' },
+      { label: 'About Us', to: '/about' },
+      { label: 'Contact', to: '/contact' },
+    ],
+    []
+  );
 
   /* Live search suggestions as user types */
   const liveSuggestions = useMemo(() => {
     if (!query.trim()) return [];
     return searchProducts(query).slice(0, 4);
   }, [query, searchProducts]);
+
+  /* Outside click listener for User Profile Dropdown */
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (menuOpen) {
@@ -63,6 +73,7 @@ export function Header() {
       if (e.key === 'Escape') {
         setSearchOpen(false);
         setMenuOpen(false);
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -110,17 +121,17 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Center: Desktop Navigation */}
+          {/* Center: Desktop Navigation (Strictly the 6 requested links) */}
           <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
-                end={link.to === '/shop'}
+                end={link.to === '/' || link.to === '/shop'}
                 className={({ isActive }) =>
                   cx(
                     'relative py-1 text-[12px] uppercase tracking-[0.14em] transition-colors duration-200 ease-soft hover:text-clay',
-                    isActive ? 'text-clay font-medium' : 'text-ink'
+                    isActive ? 'text-clay font-semibold border-b-2 border-clay' : 'text-ink font-medium'
                   )
                 }
               >
@@ -129,8 +140,8 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Right: Actions (Search, Admin, Account, Wishlist, Cart) */}
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          {/* Right: Actions (Search, User Profile Dropdown, Wishlist, Cart) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               className={iconButton}
@@ -141,37 +152,86 @@ export function Header() {
               <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.5} />
             </button>
 
+            {/* Profile Dropdown Menu */}
             {isAuthenticated ? (
-              <>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="hidden items-center gap-1.5 border border-gold/40 bg-gold/10 px-2.5 py-1.5 text-[10px] uppercase tracking-widest text-gold transition-colors duration-200 ease-soft hover:bg-gold hover:text-ink sm:inline-flex"
-                  >
-                    <ShieldIcon className="h-3 w-3" strokeWidth={1.5} />
-                    Admin
-                  </Link>
-                )}
-                <Link
-                  to="/account"
-                  className={cx(iconButton, 'hidden sm:flex')}
-                  aria-label="My Dashboard"
-                  title="My Dashboard"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center bg-ink text-[10px] font-medium uppercase text-cream">
-                    {user?.name?.charAt(0) || 'U'}
-                  </span>
-                </Link>
+              <div className="relative" ref={userMenuRef}>
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className={cx(iconButton, 'hidden sm:flex')}
-                  aria-label="Sign out"
-                  title="Sign out"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-ink text-cream font-medium text-xs shadow-sm hover:ring-2 hover:ring-gold transition-all"
+                  aria-label="User menu"
+                  title={user?.name || 'Account'}
                 >
-                  <LogOutIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.5} />
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </button>
-              </>
+
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className="absolute right-0 mt-2 w-56 rounded-md border border-sand bg-warmwhite shadow-xl py-2 z-50"
+                    >
+                      <div className="px-4 py-2.5 border-b border-sand/70">
+                        <p className="text-xs font-semibold text-ink truncate">{user?.name || 'User'}</p>
+                        <p className="text-[11px] text-smoke truncate">{user?.email}</p>
+                        {user?.role && (
+                          <span className="mt-1 inline-block text-[9px] uppercase tracking-wider px-1.5 py-0.5 bg-sand/60 text-ink rounded">
+                            {user.role}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="py-1">
+                        {isAdmin && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
+                          >
+                            <ShieldIcon className="h-4 w-4" strokeWidth={1.5} />
+                            Admin Portal
+                          </Link>
+                        )}
+
+                        <Link
+                          to="/account"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
+                        >
+                          <UserIcon className="h-4 w-4 text-smoke" strokeWidth={1.5} />
+                          My Account &amp; Orders
+                        </Link>
+
+                        <Link
+                          to="/wishlist"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-xs text-ink hover:bg-sand/40 transition-colors"
+                        >
+                          <HeartIcon className="h-4 w-4 text-smoke" strokeWidth={1.5} />
+                          Wishlist ({wishlistCount})
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-sand/70 pt-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="flex w-full items-center gap-2.5 px-4 py-2 text-xs font-medium text-clay hover:bg-clay/10 transition-colors text-left"
+                        >
+                          <LogOutIcon className="h-4 w-4" strokeWidth={1.5} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <Link
                 to="/auth"
@@ -235,7 +295,7 @@ export function Header() {
                         className="flex items-center gap-3 p-2 border border-sand bg-cream/40 hover:bg-warmwhite transition-colors"
                       >
                         <img
-                          src={item.images?.[0] || item.image}
+                          src={item.images?.[0] || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200'}
                           alt={item.name}
                           className="h-10 w-10 sm:h-12 sm:w-12 object-cover bg-sand/30"
                         />

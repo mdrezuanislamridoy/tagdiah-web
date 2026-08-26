@@ -99,7 +99,7 @@ export function ProductDetail() {
         buyNowItem: {
           productId: product.id,
           name: product.name,
-          image: product.images?.[0] || product.image,
+          image: product.images?.[0] || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800',
           color,
           size,
           quantity,
@@ -124,7 +124,7 @@ export function ProductDetail() {
       <div className="mx-auto max-w-shell px-5 py-10 lg:px-8 lg:py-14">
         <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
           <ProductGallery
-            images={product.images && product.images.length > 0 ? product.images : [product.image]}
+            images={product.images && product.images.length > 0 ? product.images : ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800']}
             name={product.name}
             badge={product.badge}
           />
@@ -360,7 +360,7 @@ export function ProductDetail() {
                   <Link to={`/product/${item.slug}`} className="group block">
                     <div className="aspect-square overflow-hidden bg-linen">
                       <img
-                        src={item.images?.[0] || item.image}
+                        src={item.images?.[0] || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800'}
                         alt={item.name}
                         className="h-full w-full object-cover transition-transform duration-300 ease-soft group-hover:scale-[1.04]"
                         loading="lazy"

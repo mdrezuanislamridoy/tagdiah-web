@@ -12,19 +12,26 @@ export interface Product {
   id: string;
   name: string;
   image: string;
+  images?: string[];
   sku: string;
+  slug?: string;
   category: string;
   subcategory: string;
   price: number;
+  compareAt?: number;
   discountPrice?: number;
   stock: number;
   lowStockAt: number;
   status: ProductStatus;
   featured: boolean;
+  isFeatured?: boolean;
   rating: number;
   reviewCount: number;
+  reviewsCount?: number;
+  variationsCount?: number;
   sold: number;
   description: string;
+  shortDescription?: string;
   seoTitle: string;
   seoDescription: string;
   variations: Variation[];
@@ -34,21 +41,23 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
+  slug?: string;
   image: string;
   parent: string | null;
   products: number;
   status: 'Active' | 'Hidden';
   description: string;
+  tagline?: string;
 }
 
 export type OrderStatus =
-'Pending' |
-'Confirmed' |
-'Processing' |
-'Shipped' |
-'Delivered' |
-'Cancelled' |
-'Returned';
+  | 'Pending'
+  | 'Confirmed'
+  | 'Processing'
+  | 'Shipped'
+  | 'Delivered'
+  | 'Cancelled'
+  | 'Returned';
 
 export type PaymentStatus = 'Paid' | 'Unpaid' | 'Refunded' | 'COD';
 
@@ -97,6 +106,7 @@ export interface Customer {
   email: string;
   phone: string;
   city: string;
+  address?: string;
   orders: number;
   spent: number;
   joined: string;

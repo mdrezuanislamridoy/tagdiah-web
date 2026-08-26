@@ -67,18 +67,18 @@ export function Footer() {
             <ul className="mt-7 space-y-3 text-sm">
               <li className="flex gap-3">
                 <MapPinIcon className="mt-0.5 h-4 w-4 shrink-0 text-gold" strokeWidth={1.5} />
-                <span className="text-cream/70">House 12, Road 27, Banani, Dhaka 1213</span>
+                <span className="text-cream/70">Dewgaon, Rajashion, Savar, Dhaka 1340, Bangladesh</span>
               </li>
               <li className="flex gap-3">
                 <PhoneIcon className="mt-0.5 h-4 w-4 shrink-0 text-gold" strokeWidth={1.5} />
-                <a href="tel:+8801712004118" className="text-cream/70 hover:text-cream">
-                  +880 1712 004 118
+                <a href="tel:01332131386" className="text-cream/70 hover:text-cream">
+                  01332-131386
                 </a>
               </li>
               <li className="flex gap-3">
                 <MailIcon className="mt-0.5 h-4 w-4 shrink-0 text-gold" strokeWidth={1.5} />
-                <a href="mailto:hello@tagdiah.com" className="text-cream/70 hover:text-cream">
-                  hello@tagdiah.com
+                <a href="mailto:tagdiah.bd@gmail.com" className="text-cream/70 hover:text-cream">
+                  tagdiah.bd@gmail.com
                 </a>
               </li>
             </ul>

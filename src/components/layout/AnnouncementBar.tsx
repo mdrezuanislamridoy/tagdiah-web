@@ -5,7 +5,7 @@ import { TruckIcon, SparklesIcon, PhoneIcon } from 'lucide-react';
 const messages = [
   { icon: TruckIcon, text: 'Free delivery on orders over ৳5,000' },
   { icon: SparklesIcon, text: 'Monsoon collection — up to 20% off' },
-  { icon: PhoneIcon, text: 'Hotline: +880 1712 004 118' },
+  { icon: PhoneIcon, text: 'Hotline: 01332-131386' },
 ];
 
 export function AnnouncementBar() {

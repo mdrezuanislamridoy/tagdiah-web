@@ -21,6 +21,21 @@ const CART_KEY = 'tagdiah_cart';
 const SAVED_KEY = 'tagdiah_saved';
 const WISHLIST_KEY = 'tagdiah_wishlist';
 
+export interface DeliverySettings {
+  insideDhakaFee: number;
+  outsideDhakaFee: number;
+  freeDeliveryThreshold: number;
+  defaultCourier: string;
+  estimatedTime: string;
+  options: Array<{
+    id: string;
+    label: string;
+    body: string;
+    price: number;
+    active: boolean;
+  }>;
+}
+
 interface StoreValue {
   products: Product[];
   categories: Category[];
@@ -34,6 +49,7 @@ interface StoreValue {
   couponLabel: string | null;
   couponError: string | null;
   totals: OrderSummaryTotals;
+  deliverySettings: DeliverySettings;
   productById: (id: string) => Product | undefined;
   productBySlug: (slug: string) => Product | undefined;
   categoryBySlug: (slug: string) => Category | undefined;
@@ -50,6 +66,7 @@ interface StoreValue {
   clearCoupon: () => void;
   clearCart: () => void;
   refreshCatalogue: () => Promise<void>;
+  refreshDeliverySettings: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -95,6 +112,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     label: string;
   } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  /* Dynamic Delivery Settings State */
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>({
+    insideDhakaFee: 120,
+    outsideDhakaFee: 150,
+    freeDeliveryThreshold: 5000,
+    defaultCourier: 'Pathao Courier',
+    estimatedTime: '2–4 business days',
+    options: [
+      { id: 'standard', label: 'Standard Doorstep Delivery', body: '3–5 working days across Bangladesh', price: 120, active: true },
+      { id: 'express', label: 'Express Dhaka Delivery', body: 'Guaranteed 24–48 hours in Dhaka metro', price: 200, active: true },
+      { id: 'pickup', label: 'Studio Collection (Savar)', body: 'Ready next business day · Free', price: 0, active: true },
+    ],
+  });
+
+  const fetchDeliverySettings = useCallback(async () => {
+    try {
+      const data = await api.get<any>('/settings/delivery');
+      if (data) {
+        setDeliverySettings({
+          insideDhakaFee: data.insideDhakaFee ?? 120,
+          outsideDhakaFee: data.outsideDhakaFee ?? 150,
+          freeDeliveryThreshold: data.freeDeliveryThreshold ?? 5000,
+          defaultCourier: data.defaultCourier || 'Pathao Courier',
+          estimatedTime: data.estimatedTime || '2–4 business days',
+          options: data.options || [],
+        });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchDeliverySettings();
+  }, [fetchDeliverySettings]);
 
   /* Sync Cart / Wishlist to LocalStorage */
   useEffect(() => {
@@ -362,13 +413,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       discount = Math.round(subtotal * COUPONS[coupon].rate);
     }
 
-    let delivery = subtotal === 0 || subtotal - discount >= 5000 ? 0 : 120;
+    const freeThreshold = deliverySettings.freeDeliveryThreshold || 5000;
+    const defaultFee = deliverySettings.insideDhakaFee ?? 120;
+    let delivery = subtotal === 0 || subtotal - discount >= freeThreshold ? 0 : defaultFee;
     if (couponDetails?.type === 'Free Delivery') {
       delivery = 0;
     }
 
     return { subtotal, discount, delivery, total: subtotal - discount + delivery };
-  }, [cart, coupon, couponDetails, productById]);
+  }, [cart, coupon, couponDetails, productById, deliverySettings]);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -384,6 +437,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       couponLabel: couponDetails?.label || (coupon ? COUPONS[coupon]?.label : null),
       couponError,
       totals,
+      deliverySettings,
       productById,
       productBySlug,
       categoryBySlug,
@@ -400,6 +454,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       clearCoupon,
       clearCart,
       refreshCatalogue: fetchCatalogue,
+      refreshDeliverySettings: fetchDeliverySettings,
     }),
     [
       products,
@@ -411,6 +466,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       coupon,
       couponError,
       totals,
+      deliverySettings,
       productById,
       productBySlug,
       categoryBySlug,
@@ -426,6 +482,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       clearCoupon,
       clearCart,
       fetchCatalogue,
+      fetchDeliverySettings,
     ]
   );
 
