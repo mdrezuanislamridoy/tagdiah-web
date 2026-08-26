@@ -280,12 +280,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [products]
   );
 
-  /* ── 4. Cart & Wishlist Actions (Login Guarded) ── */
+  /* Load DB-persisted Cart and Wishlist for logged in user */
+  useEffect(() => {
+    if (!getToken()) return;
+
+    // Fetch DB cart
+    api
+      .get<any[]>('/cart')
+      .then((dbItems) => {
+        if (Array.isArray(dbItems) && dbItems.length > 0) {
+          const mapped: CartLine[] = dbItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            color: item.color || 'Natural',
+            size: item.size || undefined,
+          }));
+          setCart(mapped);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch DB wishlist
+    api
+      .get<string[]>('/wishlist')
+      .then((dbWishlist) => {
+        if (Array.isArray(dbWishlist)) {
+          setWishlist(dbWishlist);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  /* ── 4. Cart & Wishlist Actions (Login Guarded & DB Persisted) ── */
   const addToCart = useCallback((line: CartLine) => {
     if (!getToken()) {
       window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
+
+    // Persist to backend database
+    api.post('/cart', line).catch(() => {});
+
     setCart((prev) => {
       const idx = prev.findIndex(
         (item) =>
@@ -347,6 +382,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       window.location.href = '/auth?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
+
+    // Persist wishlist toggle to backend database
+    api.post('/wishlist/toggle', { productId }).catch(() => {});
+
     setWishlist((prev) =>
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
