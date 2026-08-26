@@ -179,12 +179,6 @@ export function AdminLogin() {
             </motion.button>
           </form>
 
-          {/* demo credentials */}
-          <div className="mt-6 border border-dashed border-cream/15 bg-cream/[0.03] px-4 py-3 text-xs text-cream/40">
-            <p className="font-medium text-gold/70">Demo credentials:</p>
-            <p className="mt-1">Email: <span className="text-cream/60">admin@tagdiah.com</span></p>
-            <p>Password: <span className="text-cream/60">admin123</span></p>
-          </div>
         </div>
 
         {/* links */}
