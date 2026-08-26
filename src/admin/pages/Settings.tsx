@@ -24,7 +24,6 @@ const sections = [
   { id: 'contact', label: 'Contact details', icon: PhoneIcon },
   { id: 'delivery', label: 'Delivery & shipping', icon: TruckIcon },
   { id: 'payment', label: 'Payment methods', icon: CreditCardIcon },
-  { id: 'tax', label: 'Tax', icon: PercentIcon },
   { id: 'notifications', label: 'Notifications', icon: BellIcon },
   { id: 'profile', label: 'Admin profile', icon: UserIcon },
   { id: 'security', label: 'Password & security', icon: ShieldIcon },
@@ -98,13 +97,6 @@ export function Settings() {
     allowDiscounts: true,
   });
 
-  /* ── 5. Dynamic Tax Settings ── */
-  const [taxSettings, setTaxSettings] = useState({
-    vatRate: 7.5,
-    vatRegNumber: 'BIN 004312998-0201',
-    taxInclusive: true,
-  });
-
   /* ── 6. Dynamic Notification Settings ── */
   const [notificationSettings, setNotificationSettings] = useState({
     orderEmail: true,
@@ -146,7 +138,6 @@ export function Settings() {
               options: data.delivery.options || prev.options,
             }));
           if (data.payment) setPaymentSettings((prev) => ({ ...prev, ...data.payment }));
-          if (data.tax) setTaxSettings((prev) => ({ ...prev, ...data.tax }));
           if (data.notifications)
             setNotificationSettings((prev) => ({ ...prev, ...data.notifications }));
           if (data.security) setSecuritySettings((prev) => ({ ...prev, ...data.security }));
@@ -510,36 +501,6 @@ export function Settings() {
                     onChange={() => setPaymentSettings({ ...paymentSettings, card: !paymentSettings.card })}
                     label="Cards (Visa, Mastercard)"
                     description="Online credit/debit card processing."
-                  />
-                </div>
-              </div>
-            </Card>
-          ) : null}
-
-          {/* 5. TAX SETTINGS */}
-          {active === 'tax' ? (
-            <Card>
-              <CardHeader title="Tax settings" subtitle="VAT applied to orders at checkout" />
-              <div className="space-y-4 p-5">
-                <Field label="VAT rate (%)">
-                  <TextInput
-                    type="number"
-                    value={taxSettings.vatRate}
-                    onChange={(e) => setTaxSettings({ ...taxSettings, vatRate: Number(e.target.value) })}
-                  />
-                </Field>
-                <Field label="Business VAT registration number">
-                  <TextInput
-                    value={taxSettings.vatRegNumber}
-                    onChange={(e) => setTaxSettings({ ...taxSettings, vatRegNumber: e.target.value })}
-                  />
-                </Field>
-                <div className="rounded-xl border border-line bg-cream/40 p-4">
-                  <Toggle
-                    checked={taxSettings.taxInclusive}
-                    onChange={() => setTaxSettings({ ...taxSettings, taxInclusive: !taxSettings.taxInclusive })}
-                    label="Prices include VAT"
-                    description="Show tax-inclusive prices on the storefront."
                   />
                 </div>
               </div>

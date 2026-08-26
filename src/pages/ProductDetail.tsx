@@ -160,7 +160,7 @@ export function ProductDetail() {
                 </>
               ) : null}
             </div>
-            <p className="mt-2 text-xs text-smoke">Inclusive of VAT. Delivery calculated at checkout.</p>
+            <p className="mt-2 text-xs text-smoke">Delivery calculated at checkout.</p>
 
             <p
               className={cx(

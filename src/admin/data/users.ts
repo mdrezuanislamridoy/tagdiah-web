@@ -126,7 +126,7 @@ export const initialRoles: RoleDefinition[] = [
         category: 'Administration & System',
         items: [
           { key: 'users.manage', label: 'Manage Staff Users & Roles', granted: true },
-          { key: 'settings.edit', label: 'Edit Store Settings & VAT', granted: true },
+          { key: 'settings.edit', label: 'Edit Store Settings', granted: true },
           { key: 'analytics.view', label: 'View Revenue & Financial Reports', granted: true },
         ],
       },
@@ -168,7 +168,7 @@ export const initialRoles: RoleDefinition[] = [
         category: 'Administration & System',
         items: [
           { key: 'users.manage', label: 'Manage Staff Users & Roles', granted: false },
-          { key: 'settings.edit', label: 'Edit Store Settings & VAT', granted: false },
+          { key: 'settings.edit', label: 'Edit Store Settings', granted: false },
           { key: 'analytics.view', label: 'View Revenue & Financial Reports', granted: true },
         ],
       },
@@ -210,7 +210,7 @@ export const initialRoles: RoleDefinition[] = [
         category: 'Administration & System',
         items: [
           { key: 'users.manage', label: 'Manage Staff Users & Roles', granted: false },
-          { key: 'settings.edit', label: 'Edit Store Settings & VAT', granted: false },
+          { key: 'settings.edit', label: 'Edit Store Settings', granted: false },
           { key: 'analytics.view', label: 'View Revenue & Financial Reports', granted: false },
         ],
       },
@@ -252,7 +252,7 @@ export const initialRoles: RoleDefinition[] = [
         category: 'Administration & System',
         items: [
           { key: 'users.manage', label: 'Manage Staff Users & Roles', granted: false },
-          { key: 'settings.edit', label: 'Edit Store Settings & VAT', granted: false },
+          { key: 'settings.edit', label: 'Edit Store Settings', granted: false },
           { key: 'analytics.view', label: 'View Revenue & Financial Reports', granted: false },
         ],
       },
@@ -294,7 +294,7 @@ export const initialRoles: RoleDefinition[] = [
         category: 'Administration & System',
         items: [
           { key: 'users.manage', label: 'Manage Staff Users & Roles', granted: false },
-          { key: 'settings.edit', label: 'Edit Store Settings & VAT', granted: false },
+          { key: 'settings.edit', label: 'Edit Store Settings', granted: false },
           { key: 'analytics.view', label: 'View Revenue & Financial Reports', granted: false },
         ],
       },
