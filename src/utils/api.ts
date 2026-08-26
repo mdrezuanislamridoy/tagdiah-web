@@ -1,4 +1,22 @@
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+const getApiBaseUrl = (): string => {
+  const envUrl =
+    (import.meta as any).env?.VITE_API_URL ||
+    (import.meta as any).env?.VITE_BACKEND_URL ||
+    (import.meta as any).env?.REACT_APP_API_URL;
+
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim().replace(/\/$/, '');
+  }
+
+  // Automatic production fallback when hosted on Vercel or live domains
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    return 'https://tagdiah-backend.onrender.com/api';
+  }
+
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE = getApiBaseUrl();
 const TOKEN_KEY = 'tagdiah_token';
 
 /** Get the stored JWT token */
