@@ -28,6 +28,7 @@ import { bdt, shortDate } from '../utils/format';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../utils/api';
+import { exportToCSV } from '../utils/exportHelper';
 
 interface DashboardData {
   totalSales: number;
@@ -161,7 +162,20 @@ export function Dashboard() {
         <Button
           variant="secondary"
           icon={DownloadIcon}
-          onClick={() => toast('success', 'Report queued', 'Financial summary will arrive in your email shortly.')}
+          onClick={() => {
+            const headers = ['Metric Key', 'Value', 'Notes'];
+            const rows = [
+              ['Total Net Sales (BDT)', totalSales, 'Live net revenue'],
+              ['Total Orders Count', totalOrders, `${pendingOrders} pending confirmation`],
+              ['Pending Orders', pendingOrders, 'Awaiting fulfillment'],
+              ['Total Registered Customers', totalCustomers, 'Shopper accounts'],
+              ['Total Catalogue Products', totalProducts, `${lowStockCount} items low on stock`],
+              ['Low Stock Items Count', lowStockCount, 'At or below threshold'],
+              ['Average Order Value (BDT)', avgOrderValue, 'Per customer basket'],
+            ];
+            exportToCSV(`Tagdiah_Executive_Summary_${new Date().toISOString().split('T')[0]}`, headers, rows);
+            toast('success', 'Executive Summary Exported', 'Dashboard metrics exported as CSV report.');
+          }}
         >
           Export Report
         </Button>

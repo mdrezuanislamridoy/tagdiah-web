@@ -12,6 +12,8 @@ import { bdt, shortDate, classNames } from '../utils/format';
 import { api } from '../../utils/api';
 import type { Order } from '../types';
 
+import { exportToCSV } from '../utils/exportHelper';
+
 const PER_PAGE = 8;
 
 const tabs = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'] as const;
@@ -101,7 +103,52 @@ export function Orders() {
         <Button variant="secondary" icon={PrinterIcon} onClick={() => toast('info', 'Preparing labels', 'Shipping labels for today’s orders are being generated.')}>
           Print labels
         </Button>
-        <Button variant="secondary" icon={DownloadIcon} onClick={() => toast('success', 'Export ready', 'Orders exported as CSV.')}>
+        <Button
+          variant="secondary"
+          icon={DownloadIcon}
+          onClick={() => {
+            const headers = [
+              'Order ID',
+              'Customer Name',
+              'Email',
+              'Phone',
+              'Address',
+              'City',
+              'Date',
+              'Items Count',
+              'Subtotal',
+              'Delivery',
+              'Discount',
+              'Total (BDT)',
+              'Payment Status',
+              'Payment Method',
+              'Order Status',
+              'Courier',
+              'Tracking Number',
+            ];
+            const rows = filtered.map((o) => [
+              o.id,
+              o.customer,
+              o.email,
+              o.phone,
+              o.address,
+              o.city,
+              o.date,
+              o.items.length,
+              o.subtotal,
+              o.delivery,
+              o.discount,
+              o.total,
+              o.payment,
+              o.method,
+              o.status,
+              o.courier || 'Pathao Courier',
+              o.tracking || 'PT-Live',
+            ]);
+            exportToCSV(`Tagdiah_Orders_Report_${tab}`, headers, rows);
+            toast('success', 'Orders Exported', `${filtered.length} order(s) exported as CSV.`);
+          }}
+        >
           Export
         </Button>
       </PageHeader>

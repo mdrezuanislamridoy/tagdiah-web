@@ -10,6 +10,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../components/ui/Toast';
 import { customers as initialCustomers } from '../data/customers';
 import type { Customer } from '../types';
+import { exportToCSV } from '../utils/exportHelper';
 import { bdt, shortDate } from '../utils/format';
 import { api } from '../../utils/api';
 
@@ -167,7 +168,27 @@ export function Customers() {
         <Button variant="secondary" icon={MailIcon} onClick={() => toast('info', 'Campaign draft created', 'Compose an email to your active customers.')}>
           Email customers
         </Button>
-        <Button variant="secondary" icon={DownloadIcon} onClick={() => toast('success', 'Export ready', 'Customer list exported as CSV.')}>
+        <Button
+          variant="secondary"
+          icon={DownloadIcon}
+          onClick={() => {
+            const headers = ['Customer ID', 'Full Name', 'Email', 'Phone', 'City', 'Address', 'Orders Count', 'Total Spent (BDT)', 'Joined Date', 'Status'];
+            const rows = filtered.map((c) => [
+              c.id,
+              c.name,
+              c.email,
+              c.phone,
+              c.city,
+              c.address || '',
+              c.orders,
+              c.spent,
+              c.joined,
+              c.status,
+            ]);
+            exportToCSV('Tagdiah_Customers_Report', headers, rows);
+            toast('success', 'Customers Exported', `${filtered.length} customer(s) exported as CSV.`);
+          }}
+        >
           Export
         </Button>
         <Button icon={UserPlusIcon} onClick={() => setAddCustomerOpen(true)}>

@@ -25,6 +25,8 @@ import { products } from '../data/products';
 import { bdt } from '../utils/format';
 import { useToast } from '../components/ui/Toast';
 
+import { exportToCSV } from '../utils/exportHelper';
+
 const pieColors = [chartColors.brown, chartColors.terracotta, chartColors.gold, chartColors.sage];
 
 export function Analytics() {
@@ -38,8 +40,22 @@ export function Analytics() {
     window.setTimeout(() => setLoading(false), 900);
   };
 
-  const best = [...products].sort((a, b) => b.sold - a.sold).slice(0, 5);
+  const best = [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0)).slice(0, 5);
   const maxSold = best[0]?.sold ?? 1;
+
+  const handleExport = () => {
+    const headers = ['Product ID', 'Product Name', 'Category', 'Price (BDT)', 'Units Sold', 'Total Sales Revenue (BDT)'];
+    const rows = products.map((p) => [
+      p.id,
+      p.name,
+      p.category,
+      p.price,
+      p.sold || 0,
+      (p.discountPrice ?? p.price) * (p.sold || 0),
+    ]);
+    exportToCSV(`Tagdiah_Performance_Report_${range.replace(/\s+/g, '_')}`, headers, rows);
+    toast('success', 'Report Exported', `${range} performance report downloaded as CSV.`);
+  };
 
   return (
     <>
@@ -48,7 +64,7 @@ export function Analytics() {
         <Button variant="secondary" icon={CalendarDaysIcon}>
           Custom range
         </Button>
-        <Button icon={DownloadIcon} onClick={() => toast('success', 'Report exported', `${range} performance report downloaded as PDF.`)}>
+        <Button icon={DownloadIcon} onClick={handleExport}>
           Export report
         </Button>
       </PageHeader>
