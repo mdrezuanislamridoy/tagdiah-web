@@ -169,7 +169,6 @@ export function Settings() {
       else if (active === 'contact') activePayload = contactSettings;
       else if (active === 'delivery') activePayload = deliverySettings;
       else if (active === 'payment') activePayload = paymentSettings;
-      else if (active === 'tax') activePayload = taxSettings;
       else if (active === 'notifications') activePayload = notificationSettings;
       else if (active === 'profile') activePayload = profileSettings;
       else if (active === 'security') activePayload = securitySettings;

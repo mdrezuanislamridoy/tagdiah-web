@@ -86,9 +86,45 @@ export function UserManagement() {
   /* ── State ── */
   const [staffList, setStaffList] = useState<StaffUser[]>(initialStaffUsers);
   const [customerList, setCustomerList] = useState<Customer[]>(initialCustomers);
-  const [rolesList, setRolesList] = useState<RoleDefinition[]>(initialRoles);
+  const [rolesList, setRolesList] = useState<RoleDefinition[]>(() => {
+    try {
+      const saved = localStorage.getItem('tagdiah_roles_permissions');
+      return saved ? JSON.parse(saved) : initialRoles;
+    } catch {
+      return initialRoles;
+    }
+  });
   const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>(initialAuditLogs);
   const [loading, setLoading] = useState(false);
+  const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
+
+  const toggleRolePermission = (roleId: string, categoryName: string, itemKey: string) => {
+    if (roleId === 'role-super-admin') {
+      toast('warning', 'Super Admin Protected', 'Super Admin permissions are permanently enabled for system integrity.');
+      return;
+    }
+
+    setRolesList((prev) => {
+      const updated = prev.map((role) => {
+        if (role.id !== roleId) return role;
+        const newPermissions = role.permissions.map((cat) => {
+          if (cat.category !== categoryName) return cat;
+          const newItems = cat.items.map((item) => {
+            if (item.key !== itemKey) return item;
+            return { ...item, granted: !item.granted };
+          });
+          return { ...cat, items: newItems };
+        });
+        return { ...role, permissions: newPermissions };
+      });
+
+      localStorage.setItem('tagdiah_roles_permissions', JSON.stringify(updated));
+      return updated;
+    });
+
+    const targetRole = rolesList.find((r) => r.id === roleId)?.name || 'Role';
+    toast('success', 'Permissions Updated', `Permission toggled for ${targetRole}.`);
+  };
 
   /* Filter states */
   const [staffSearch, setStaffSearch] = useState('');
@@ -770,19 +806,28 @@ export function UserManagement() {
                   <p className="mt-3 text-[13px] leading-relaxed text-ink-70">{role.description}</p>
                 </div>
                 <div className="mt-5 border-t border-line pt-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-30 mb-2">Key Privileges</p>
-                  <ul className="space-y-1 text-[12px] text-ink">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-30 mb-2">Active Privileges</p>
+                  <ul className="space-y-1 text-[12px] text-ink mb-4">
                     {role.permissions
                       .flatMap((p) => p.items)
                       .filter((i) => i.granted)
                       .slice(0, 3)
                       .map((item) => (
                         <li key={item.key} className="flex items-center gap-2">
-                          <CheckCircle2Icon className="h-3.5 w-3.5 text-sage" />
-                          <span>{item.label}</span>
+                          <CheckCircle2Icon className="h-3.5 w-3.5 text-sage flex-shrink-0" />
+                          <span className="truncate">{item.label}</span>
                         </li>
                       ))}
                   </ul>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={SlidersHorizontalIcon}
+                    onClick={() => setEditingRole(role)}
+                    className="w-full"
+                  >
+                    Configure Permissions
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -790,11 +835,11 @@ export function UserManagement() {
 
           <Card>
             <CardHeader
-              title="Granular Permission Matrix"
-              subtitle="Inspect role-level access rights across core storefront subsystems"
+              title="Interactive Granular Permission Matrix"
+              subtitle="Click any role badge to immediately grant or revoke permissions for that subsystem"
             />
             <div className="divide-y divide-line p-5">
-              {rolesList[0].permissions.map((cat, catIdx) => (
+              {rolesList[0].permissions.map((cat) => (
                 <div key={cat.category} className="py-4 first:pt-0 last:pb-0">
                   <h4 className="font-display text-[15px] font-semibold text-ink mb-3">{cat.category}</h4>
                   <div className="space-y-3">
@@ -806,19 +851,23 @@ export function UserManagement() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           {rolesList.map((r) => {
-                            const hasPermission = r.permissions[catIdx]?.items.find((i) => i.key === item.key)?.granted;
+                            const catObj = r.permissions.find((c) => c.category === cat.category);
+                            const hasPermission = catObj?.items.find((i) => i.key === item.key)?.granted;
                             return (
-                              <span
+                              <button
                                 key={r.id}
+                                type="button"
+                                onClick={() => toggleRolePermission(r.id, cat.category, item.key)}
+                                title={`Click to ${hasPermission ? 'revoke' : 'grant'} ${item.label} for ${r.name}`}
                                 className={classNames(
-                                   'rounded-lg px-2.5 py-1 text-[11px] font-medium border',
+                                  'rounded-lg px-2.5 py-1 text-[11px] font-medium border transition-all duration-150 active:scale-95 cursor-pointer',
                                   hasPermission
-                                    ? 'bg-sage-tint text-sage border-sage/20'
-                                    : 'bg-surface text-ink-30 border-line'
+                                    ? 'bg-sage-tint text-sage border-sage/40 hover:bg-sage/20'
+                                    : 'bg-surface text-ink-40 border-line hover:border-gold/50'
                                 )}
                               >
                                 {r.name.split(' ')[0]}: {hasPermission ? '✓ Yes' : '✕ No'}
-                              </span>
+                              </button>
                             );
                           })}
                         </div>
@@ -1201,6 +1250,70 @@ export function UserManagement() {
         message="This user will immediately lose access to the Tagdiah admin dashboard and order operations."
         confirmLabel="Remove User"
       />
+
+      {/* ── Configure Role Permissions Modal ── */}
+      {editingRole && (
+        <Modal
+          open={!!editingRole}
+          onClose={() => setEditingRole(null)}
+          title={`Configure Permissions — ${editingRole.name}`}
+          width="max-w-2xl"
+        >
+          <div className="space-y-5">
+            <p className="text-[13px] text-ink-50">
+              Toggle specific subsystem capabilities for <strong>{editingRole.name}</strong> accounts. Changes take effect immediately across all users assigned to this role.
+            </p>
+
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
+              {editingRole.permissions.map((cat) => (
+                <div key={cat.category} className="space-y-3 rounded-xl border border-line bg-canvas p-4">
+                  <h4 className="font-display text-[14px] font-semibold text-ink">{cat.category}</h4>
+                  <div className="space-y-2">
+                    {cat.items.map((item) => (
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface p-3"
+                      >
+                        <div>
+                          <p className="text-[13px] font-medium text-ink">{item.label}</p>
+                          <code className="text-[11px] text-ink-50">{item.key}</code>
+                        </div>
+                        <Toggle
+                          checked={item.granted}
+                          onChange={() => {
+                            if (editingRole.id === 'role-super-admin') return;
+                            toggleRolePermission(editingRole.id, cat.category, item.key);
+                            setEditingRole((prev) => {
+                              if (!prev) return null;
+                              const newPerms = prev.permissions.map((c) => {
+                                if (c.category !== cat.category) return c;
+                                return {
+                                  ...c,
+                                  items: c.items.map((i) =>
+                                    i.key === item.key ? { ...i, granted: !i.granted } : i
+                                  ),
+                                };
+                              });
+                              return { ...prev, permissions: newPerms };
+                            });
+                          }}
+                          label=""
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button type="button" onClick={() => setEditingRole(null)}>
+                Done Configuring
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
