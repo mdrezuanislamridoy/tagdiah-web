@@ -6,16 +6,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { products as initialProducts, productById as fallbackProductById, productBySlug as fallbackProductBySlug } from '../data/products';
-import { categories as initialCategories, categoryBySlug as fallbackCategoryBySlug } from '../data/categories';
 import { api } from '../utils/api';
 import type { CartLine, Category, OrderSummaryTotals, Product } from '../types';
-
-const COUPONS: Record<string, { rate: number; label: string }> = {
-  TAGDIAH10: { rate: 0.1, label: '10% welcome discount' },
-  MONSOON15: { rate: 0.15, label: '15% monsoon collection' },
-  ARTISAN20: { rate: 0.2, label: '20% handcrafted celebration' },
-};
 
 const CART_KEY = 'tagdiah_cart';
 const SAVED_KEY = 'tagdiah_saved';
@@ -72,8 +64,8 @@ interface StoreValue {
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
 
   /* ── 1. LocalStorage initialized Cart & Wishlist ── */
@@ -82,10 +74,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(CART_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return [
-      { productId: 'p-03', quantity: 2, color: 'Oatmeal', size: '7 ft — Door' },
-      { productId: 'p-04', quantity: 1, color: 'Sand', size: 'Tall — 28 cm' },
-    ];
+    return [];
   });
 
   const [savedForLater, setSavedForLater] = useState<CartLine[]>(() => {
@@ -93,7 +82,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(SAVED_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return [{ productId: 'p-10', quantity: 1, color: 'Terracotta' }];
+    return [];
   });
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
@@ -101,7 +90,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(WISHLIST_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return ['p-01', 'p-07', 'p-11'];
+    return [];
   });
 
   const [coupon, setCoupon] = useState<string | null>(null);
@@ -166,15 +155,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [wishlist]);
 
-  /* ── 2. Load Dynamic Products & Categories from Backend ── */
+  /* ── 2. Load Real Dynamic Products & Categories from Backend ── */
   const fetchCatalogue = useCallback(async () => {
+    setLoadingProducts(true);
     try {
       const [backendProducts, backendCategories] = await Promise.allSettled([
         api.get<any[]>('/products'),
         api.get<any[]>('/categories'),
       ]);
 
-      if (backendCategories.status === 'fulfilled' && Array.isArray(backendCategories.value) && backendCategories.value.length > 0) {
+      if (backendCategories.status === 'fulfilled' && Array.isArray(backendCategories.value)) {
         const mappedCategories: Category[] = backendCategories.value.map((c) => ({
           slug: c.slug,
           name: c.name,
@@ -184,9 +174,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           count: c._count?.products || 0,
         }));
         setCategories(mappedCategories);
+      } else {
+        setCategories([]);
       }
 
-      if (backendProducts.status === 'fulfilled' && Array.isArray(backendProducts.value) && backendProducts.value.length > 0) {
+      if (backendProducts.status === 'fulfilled' && Array.isArray(backendProducts.value)) {
         const mappedProducts: Product[] = backendProducts.value.map((p) => {
           let images: string[] = [];
           try {
@@ -219,7 +211,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             compareAt: p.compareAt || undefined,
             discountPrice: p.discountPrice || undefined,
             rating: 4.9,
-            reviewCount: p.reviews?.length || 12,
+            reviewCount: p.reviews?.length || 0,
             images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80&w=1200'],
             badge: p.badge || (p.featured ? 'Featured' : undefined),
             colors,
@@ -235,18 +227,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             newArrival: p.badge === 'New Arrival',
           };
         });
-
-        // Merge backend products with fallback products for rich display
-        const combined = [...mappedProducts];
-        initialProducts.forEach((ip) => {
-          if (!combined.some((cp) => cp.id === ip.id || cp.slug === ip.slug)) {
-            combined.push(ip);
-          }
-        });
-        setProducts(combined);
+        setProducts(mappedProducts);
+      } else {
+        setProducts([]);
       }
     } catch {
-      // Fallback remains initial data
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoadingProducts(false);
     }
@@ -259,21 +246,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   /* ── 3. Lookup & Search Helpers ── */
   const productById = useCallback(
     (id: string) => {
-      return products.find((p) => p.id === id) || fallbackProductById(id);
+      return products.find((p) => p.id === id);
     },
     [products]
   );
 
   const productBySlug = useCallback(
     (slug: string) => {
-      return products.find((p) => p.slug === slug) || fallbackProductBySlug(slug);
+      return products.find((p) => p.slug === slug);
     },
     [products]
   );
 
   const categoryBySlug = useCallback(
     (slug: string) => {
-      return categories.find((c) => c.slug === slug) || fallbackCategoryBySlug(slug);
+      return categories.find((c) => c.slug === slug);
     },
     [categories]
   );
@@ -283,12 +270,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!query || !query.trim()) return products;
       const q = query.trim().toLowerCase();
       return products.filter((p) => {
-        const nameMatch = p.name.toLowerCase().includes(q);
-        const descMatch = (p.description || p.shortDescription || '').toLowerCase().includes(q);
-        const catMatch = p.category.toLowerCase().includes(q);
-        const matMatch = p.materials.some((m) => m.toLowerCase().includes(q));
-        const colMatch = p.colors.some((c) => c.toLowerCase().includes(q));
-        return nameMatch || descMatch || catMatch || matMatch || colMatch;
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)
+        );
       });
     },
     [products]
@@ -297,12 +283,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   /* ── 4. Cart & Wishlist Actions ── */
   const addToCart = useCallback((line: CartLine) => {
     setCart((prev) => {
-      const match = prev.findIndex(
-        (l) => l.productId === line.productId && l.color === line.color && l.size === line.size
+      const idx = prev.findIndex(
+        (item) =>
+          item.productId === line.productId &&
+          item.color === line.color &&
+          item.size === line.size
       );
-      if (match > -1) {
+      if (idx > -1) {
         const next = [...prev];
-        next[match] = { ...next[match], quantity: next[match].quantity + line.quantity };
+        next[idx] = {
+          ...next[idx],
+          quantity: next[idx].quantity + line.quantity,
+        };
         return next;
       }
       return [...prev, line];
@@ -310,9 +302,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateQuantity = useCallback((index: number, quantity: number) => {
-    setCart((prev) =>
-      prev.map((line, i) => (i === index ? { ...line, quantity: Math.max(1, quantity) } : line))
-    );
+    setCart((prev) => {
+      if (quantity <= 0) {
+        return prev.filter((_, i) => i !== index);
+      }
+      const next = [...prev];
+      next[index] = { ...next[index], quantity };
+      return next;
+    });
   }, []);
 
   const removeLine = useCallback((index: number) => {
@@ -321,19 +318,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const saveForLater = useCallback((index: number) => {
     setCart((prev) => {
-      const line = prev[index];
-      if (line) setSavedForLater((saved) => [...saved, line]);
+      const target = prev[index];
+      if (!target) return prev;
+      setSavedForLater((s) => [...s, target]);
       return prev.filter((_, i) => i !== index);
     });
   }, []);
 
   const moveToCart = useCallback((index: number) => {
     setSavedForLater((prev) => {
-      const line = prev[index];
-      if (line) setCart((c) => [...c, line]);
+      const target = prev[index];
+      if (!target) return prev;
+      addToCart(target);
       return prev.filter((_, i) => i !== index);
     });
-  }, []);
+  }, [addToCart]);
 
   const removeSaved = useCallback((index: number) => {
     setSavedForLater((prev) => prev.filter((_, i) => i !== index));
@@ -378,21 +377,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setCouponError(null);
         }
       } catch (err: any) {
-        // Fallback for offline default coupon keys
-        if (COUPONS[key]) {
-          setCoupon(key);
-          setCouponDetails({
-            code: key,
-            type: 'Percentage',
-            amount: COUPONS[key].rate * 100,
-            label: COUPONS[key].label,
-          });
-          setCouponError(null);
-        } else {
-          setCoupon(null);
-          setCouponDetails(null);
-          setCouponError(err?.message || `“${code}” is not a valid coupon code.`);
-        }
+        setCoupon(null);
+        setCouponDetails(null);
+        setCouponError(err?.message || `“${code}” is not a valid coupon code.`);
       }
     },
     [cart, productById]
@@ -433,89 +420,82 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         discount = Math.round((subtotal * couponDetails.amount) / 100);
       } else if (couponDetails.type === 'Fixed') {
         discount = Math.min(subtotal, couponDetails.amount);
+      } else if (couponDetails.type === 'Free Delivery') {
+        discount = deliverySettings.insideDhakaFee;
       }
-    } else if (coupon && COUPONS[coupon]) {
-      discount = Math.round(subtotal * COUPONS[coupon].rate);
     }
 
-    const freeThreshold = deliverySettings.freeDeliveryThreshold || 5000;
-    const defaultFee = deliverySettings.insideDhakaFee ?? 120;
-    let delivery = subtotal === 0 || subtotal - discount >= freeThreshold ? 0 : defaultFee;
-    if (couponDetails?.type === 'Free Delivery') {
-      delivery = 0;
-    }
+    const freeThreshold = deliverySettings.freeDeliveryThreshold;
+    const isFreeDelivery = subtotal >= freeThreshold;
+    const delivery = isFreeDelivery ? 0 : deliverySettings.insideDhakaFee;
+    const total = Math.max(0, subtotal - discount + delivery);
 
-    return { subtotal, discount, delivery, total: subtotal - discount + delivery };
-  }, [cart, coupon, couponDetails, productById, deliverySettings]);
+    return {
+      subtotal,
+      discount,
+      delivery,
+      total,
+      isFreeDelivery,
+      freeThresholdRemaining: Math.max(0, freeThreshold - subtotal),
+    };
+  }, [cart, couponDetails, deliverySettings, productById]);
 
-  const value = useMemo<StoreValue>(
-    () => ({
-      products,
-      categories,
-      loadingProducts,
-      cart,
-      savedForLater,
-      wishlist,
-      cartCount: cart.reduce((n, l) => n + l.quantity, 0),
-      wishlistCount: wishlist.length,
-      coupon,
-      couponLabel: couponDetails?.label || (coupon ? COUPONS[coupon]?.label : null),
-      couponError,
-      totals,
-      deliverySettings,
-      productById,
-      productBySlug,
-      categoryBySlug,
-      searchProducts,
-      addToCart,
-      updateQuantity,
-      removeLine,
-      saveForLater,
-      moveToCart,
-      removeSaved,
-      toggleWishlist,
-      isWishlisted: (id: string) => wishlist.includes(id),
-      applyCoupon,
-      clearCoupon,
-      clearCart,
-      refreshCatalogue: fetchCatalogue,
-      refreshDeliverySettings: fetchDeliverySettings,
-    }),
-    [
-      products,
-      categories,
-      loadingProducts,
-      cart,
-      savedForLater,
-      wishlist,
-      coupon,
-      couponError,
-      totals,
-      deliverySettings,
-      productById,
-      productBySlug,
-      categoryBySlug,
-      searchProducts,
-      addToCart,
-      updateQuantity,
-      removeLine,
-      saveForLater,
-      moveToCart,
-      removeSaved,
-      toggleWishlist,
-      applyCoupon,
-      clearCoupon,
-      clearCart,
-      fetchCatalogue,
-      fetchDeliverySettings,
-    ]
+  const cartCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
   );
 
-  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+  const wishlistCount = wishlist.length;
+
+  const isWishlisted = useCallback(
+    (productId: string) => wishlist.includes(productId),
+    [wishlist]
+  );
+
+  return (
+    <StoreContext.Provider
+      value={{
+        products,
+        categories,
+        loadingProducts,
+        cart,
+        savedForLater,
+        wishlist,
+        cartCount,
+        wishlistCount,
+        coupon,
+        couponLabel: couponDetails?.label || null,
+        couponError,
+        totals,
+        deliverySettings,
+        productById,
+        productBySlug,
+        categoryBySlug,
+        searchProducts,
+        addToCart,
+        updateQuantity,
+        removeLine,
+        saveForLater,
+        moveToCart,
+        removeSaved,
+        toggleWishlist,
+        isWishlisted,
+        applyCoupon,
+        clearCoupon,
+        clearCart,
+        refreshCatalogue: fetchCatalogue,
+        refreshDeliverySettings: fetchDeliverySettings,
+      }}
+    >
+      {children}
+    </StoreContext.Provider>
+  );
 }
 
-export function useStore(): StoreValue {
-  const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error('useStore must be used within a StoreProvider');
-  return ctx;
+export function useStore() {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error('useStore must be used within a StoreProvider');
+  }
+  return context;
 }
