@@ -36,15 +36,16 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Exactly specified Nav Links: Home, All Products, New Arrivals, Most Rated, About Us, Contact
+  // Navigation links exactly matching reference design
   const navLinks = useMemo(
     () => [
-      { label: 'Home', to: '/' },
-      { label: 'All Products', to: '/shop' },
-      { label: 'New Arrivals', to: '/shop/new-arrivals' },
-      { label: 'Most Rated', to: '/shop/top-rated' },
-      { label: 'About Us', to: '/about' },
-      { label: 'Contact', to: '/contact' },
+      { label: 'HOME', to: '/' },
+      { label: 'CURTAINS', to: '/shop?category=curtains' },
+      { label: 'BEDDING', to: '/shop?category=bedding' },
+      { label: 'HOME DECOR', to: '/shop?category=decor' },
+      { label: 'KITCHEN & DINING', to: '/shop?category=dining' },
+      { label: 'NEW ARRIVALS', to: '/shop/new-arrivals' },
+      { label: 'SALE', to: '/shop?sale=true' },
     ],
     []
   );
@@ -128,13 +129,30 @@ export function Header() {
               <MenuIcon className="h-5 w-5" strokeWidth={1.5} />
             </button>
 
-            <Link to="/" className="flex flex-col leading-none min-w-0 truncate">
-              <span className="font-display text-base sm:text-lg lg:text-[26px] font-medium tracking-[0.12em] sm:tracking-[0.18em] lg:tracking-[0.22em] text-ink truncate">
-                TAGDIAH
-              </span>
-              <span className="mt-0.5 text-[7px] sm:text-[9px] uppercase tracking-[0.16em] sm:tracking-[0.32em] text-bark truncate">
-                Home Décor &amp; Arts
-              </span>
+            <Link to="/" className="flex items-center gap-2.5 min-w-0">
+              {/* Ornate Gold Emblem */}
+              <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center text-[#B08A3E] shrink-0">
+                <svg viewBox="0 0 40 40" fill="none" className="h-full w-full" stroke="currentColor" strokeWidth="1.6">
+                  {/* Lotus / Mandala decorative emblem matching Tagdiah brand */}
+                  <circle cx="20" cy="20" r="4" fill="currentColor" fillOpacity="0.25" />
+                  <path d="M20 4 C16 12, 16 16, 20 20 C24 16, 24 12, 20 4 Z" fill="currentColor" fillOpacity="0.15" />
+                  <path d="M20 36 C16 28, 16 24, 20 20 C24 24, 24 28, 20 36 Z" fill="currentColor" fillOpacity="0.15" />
+                  <path d="M4 20 C12 16, 16 16, 20 20 C16 24, 12 24, 4 20 Z" fill="currentColor" fillOpacity="0.15" />
+                  <path d="M36 20 C28 16, 24 16, 20 20 C24 24, 28 24, 36 20 Z" fill="currentColor" fillOpacity="0.15" />
+                  <path d="M8.7 8.7 C14 14, 16 16, 20 20 C16 20, 14 22, 8.7 8.7 Z" strokeLinecap="round" />
+                  <path d="M31.3 8.7 C26 14, 24 16, 20 20 C24 20, 26 22, 31.3 8.7 Z" strokeLinecap="round" />
+                  <circle cx="20" cy="20" r="14" strokeDasharray="2 2" strokeOpacity="0.6" />
+                </svg>
+              </div>
+
+              <div className="flex flex-col leading-none min-w-0">
+                <span className="font-display text-[21px] sm:text-[25px] lg:text-[27px] font-normal tracking-[0.02em] text-[#143423]">
+                  Tagdiah
+                </span>
+                <span className="mt-0.5 text-[7px] sm:text-[8px] uppercase tracking-[0.26em] text-[#A6824F] font-medium">
+                  HOME DECOR &amp; ARTS
+                </span>
+              </div>
             </Link>
           </div>
 
@@ -147,8 +165,8 @@ export function Header() {
                 end={link.to === '/' || link.to === '/shop'}
                 className={({ isActive }) =>
                   cx(
-                    'relative py-1 text-[12px] uppercase tracking-[0.14em] transition-colors duration-200 ease-soft hover:text-clay',
-                    isActive ? 'text-clay font-semibold border-b-2 border-clay' : 'text-ink font-medium'
+                    'relative py-1 text-[11.5px] uppercase tracking-[0.14em] transition-colors duration-200 ease-soft',
+                    isActive ? 'text-[#143423] font-semibold border-b-2 border-[#B08A3E]' : 'text-ink font-medium hover:text-[#B08A3E]'
                   )
                 }
               >
@@ -252,9 +270,10 @@ export function Header() {
             ) : (
               <Link
                 to="/auth"
-                className="hidden text-[11px] uppercase tracking-widest text-ink transition-colors duration-200 ease-soft hover:text-clay sm:block"
+                className={iconButton}
+                aria-label="Sign In or My Account"
               >
-                Sign In
+                <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.5} />
               </Link>
             )}
 
@@ -265,7 +284,9 @@ export function Header() {
 
             <Link to="/cart" className={iconButton} aria-label="Shopping cart">
               <ShoppingBagIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.5} />
-              {cartCount > 0 && <Count value={cartCount} />}
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#123826] text-[10px] font-bold text-white shadow-sm ring-1 ring-white">
+                {cartCount}
+              </span>
             </Link>
           </div>
         </div>

@@ -1,47 +1,50 @@
 import React from 'react';
-import { HeartIcon, InstagramIcon } from 'lucide-react';
 import { instagramPosts } from '../../data/content';
 
 export function InstagramGallery() {
   return (
-    <section className="mx-auto max-w-shell px-5 py-20 lg:px-8 lg:py-28">
-      <div className="flex flex-col items-center text-center">
-        <p className="eyebrow text-clay">@tagdiah</p>
-        <h2 className="mt-3 font-display text-3xl font-light leading-tight text-ink sm:text-4xl">
-          Tag your room with #MyTagdiah
+    <section className="bg-[#FAF7F2] py-10 sm:py-14 lg:py-16">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-12 text-center">
+        
+        {/* Title */}
+        <h2 className="font-display text-xl sm:text-2xl lg:text-[26px] font-bold tracking-[0.08em] text-[#163323] uppercase">
+          FOLLOW US ON INSTAGRAM
         </h2>
-        <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-smoke">
-          We repost one customer photograph every week — and send a ৳1,000 credit when we do.
+        
+        {/* Subtitle / Handle */}
+        <p className="mt-1 text-xs sm:text-[13px] font-medium tracking-wider text-[#A6824F]">
+          <a
+            href="https://instagram.com"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline"
+          >
+            @tagdiahhomedecor
+          </a>
         </p>
-      </div>
 
-      <ul className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {instagramPosts.map((post) =>
-        <li key={post.id}>
+        {/* 8-Photo Gallery Strip */}
+        <div className="mt-7 sm:mt-9 grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
+          {instagramPosts.slice(0, 8).map((post) => (
             <a
-            href="#"
-            className="group relative block overflow-hidden bg-linen"
-            aria-label={`Instagram post: ${post.caption}`}>
-            
-              <div className="aspect-square w-full">
-                <img
+              key={post.id}
+              href="https://instagram.com"
+              target="_blank"
+              rel="noreferrer"
+              className="group relative aspect-square overflow-hidden rounded-md bg-[#ECE4D8] shadow-sm transition-all duration-300 hover:shadow-md"
+            >
+              <img
                 src={post.image}
-                alt=""
-                className="h-full w-full object-cover transition-transform duration-300 ease-soft group-hover:scale-[1.05]"
-                loading="lazy" />
-              
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink/55 opacity-0 transition-opacity duration-200 ease-soft group-hover:opacity-100">
-                <InstagramIcon className="h-5 w-5 text-cream" strokeWidth={1.5} />
-                <span className="flex items-center gap-1.5 text-xs text-cream">
-                  <HeartIcon className="h-3.5 w-3.5 fill-cream" strokeWidth={1.5} />
-                  {post.likes.toLocaleString()}
-                </span>
-              </div>
+                alt={post.caption}
+                className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
             </a>
-          </li>
-        )}
-      </ul>
-    </section>);
+          ))}
+        </div>
 
+      </div>
+    </section>
+  );
 }

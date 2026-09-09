@@ -4,6 +4,7 @@ import { CategoryGrid } from '../components/home/CategoryGrid';
 import { BestSellers } from '../components/home/BestSellers';
 import { PromoBanner } from '../components/home/PromoBanner';
 import { NewArrivals } from '../components/home/NewArrivals';
+import { GuaranteeBar } from '../components/home/GuaranteeBar';
 import { Inspiration } from '../components/home/Inspiration';
 import { Testimonials } from '../components/home/Testimonials';
 import { InstagramGallery } from '../components/home/InstagramGallery';
@@ -17,10 +18,11 @@ export function Home() {
       <BestSellers />
       <PromoBanner />
       <NewArrivals />
+      <GuaranteeBar />
       <Inspiration />
       <Testimonials />
       <InstagramGallery />
       <Newsletter />
-    </>);
-
+    </>
+  );
 }

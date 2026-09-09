@@ -8,6 +8,8 @@ import React, {
 } from 'react';
 import { api, getToken } from '../utils/api';
 import type { CartLine, Category, OrderSummaryTotals, Product } from '../types';
+import { products as initialProducts } from '../data/products';
+import { categories as initialCategories } from '../data/categories';
 
 const CART_KEY = 'tagdiah_cart';
 const SAVED_KEY = 'tagdiah_saved';
@@ -64,9 +66,9 @@ interface StoreValue {
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
 
   /* ── 1. LocalStorage initialized Cart & Wishlist ── */
   const [cart, setCart] = useState<CartLine[]>(() => {

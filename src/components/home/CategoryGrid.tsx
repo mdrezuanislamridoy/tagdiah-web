@@ -1,82 +1,68 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRightIcon } from 'lucide-react';
-import { SectionHeading } from '../ui/SectionHeading';
 import { useStore } from '../../contexts/StoreContext';
-import { cx } from '../../utils/format';
-import type { Category } from '../../types';
+import { categories as defaultCategories } from '../../data/categories';
 
 export function CategoryGrid() {
-  const { categories } = useStore();
-  if (!categories || categories.length === 0) return null;
-  const [feature, ...rest] = categories;
+  const { categories: storeCategories } = useStore();
+  const categories = storeCategories && storeCategories.length > 0 ? storeCategories : defaultCategories;
 
   return (
-    <section className="mx-auto max-w-shell px-5 py-20 lg:px-8 lg:py-28">
-      <SectionHeading
-        eyebrow="Browse by room, or by craft"
-        title="Five collections, one language"
-        intro="Everything we make shares the same palette and the same hand — so pieces bought a year apart still sit together."
-        linkTo="/shop"
-        linkLabel="Shop everything" />
-      
-
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
-        <CategoryTile category={feature} className="lg:col-span-2 lg:row-span-2" featured />
-        {rest.map((category) =>
-        <CategoryTile key={category.slug} category={category} />
-        )}
-      </div>
-    </section>);
-
-}
-
-function CategoryTile({
-  category,
-  className,
-  featured = false,
-}: {
-  category: Category;
-  className?: string;
-  featured?: boolean;
-}) {
-  return (
-    <Link
-      to={`/shop/${category.slug}`}
-      className={cx('group relative block overflow-hidden bg-linen', className)}>
-      
-      <div className={cx('w-full', featured ? 'aspect-[4/5] lg:aspect-auto lg:h-full' : 'aspect-[4/5]')}>
-        <img
-          src={category.image}
-          alt=""
-          className="h-full w-full object-cover transition-transform duration-300 ease-soft group-hover:scale-[1.04]"
-          loading="lazy" />
+    <section className="bg-[#FAF7F2] py-12 sm:py-16 lg:py-20 border-b border-[#EAE2D2]/60">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 xl:px-12">
         
-      </div>
-      <div className="absolute inset-0 bg-ink/20 transition-colors duration-200 ease-soft group-hover:bg-ink/35" />
-      <div className="absolute inset-x-0 bottom-0 p-5 lg:p-7">
-        <p className="eyebrow text-cream/80">{category.tagline}</p>
-        <h3
-          className={cx(
-            'mt-2 font-display font-light text-cream',
-            featured ? 'text-3xl lg:text-4xl' : 'text-2xl'
-          )}>
+        {/* Section Header with Golden Ornament */}
+        <div className="text-center mb-10 sm:mb-14">
+          <h2 className="font-display text-2xl sm:text-3xl lg:text-[32px] font-normal tracking-[0.12em] text-[#163323] uppercase">
+            SHOP BY CATEGORY
+          </h2>
           
-          {category.name}
-        </h3>
-        {featured &&
-        <p className="mt-3 max-w-sm text-sm leading-relaxed text-cream/80">
-            {category.description}
-          </p>
-        }
-        <span className="mt-4 inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-cream">
-          {category.count} pieces
-          <ArrowUpRightIcon
-            className="h-3.5 w-3.5 transition-transform duration-200 ease-soft group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-            strokeWidth={1.5} />
-          
-        </span>
-      </div>
-    </Link>);
+          {/* Ornate Gold Divider */}
+          <div className="mt-2.5 flex items-center justify-center gap-3">
+            <div className="h-[1px] w-12 sm:w-20 bg-gradient-to-r from-transparent to-[#C4A468]" />
+            <div className="flex items-center text-[#C4A468]">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z" fill="currentColor" fillOpacity="0.3" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              </svg>
+            </div>
+            <div className="h-[1px] w-12 sm:w-20 bg-gradient-to-l from-transparent to-[#C4A468]" />
+          </div>
+        </div>
 
+        {/* 5 Circular Category Items */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 sm:gap-8 lg:gap-10 justify-items-center">
+          {categories.slice(0, 5).map((category) => (
+            <Link
+              key={category.slug}
+              to={`/shop?category=${category.slug}`}
+              className="group flex flex-col items-center text-center focus-visible:outline-none"
+            >
+              {/* Circle Image Thumbnail */}
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-full overflow-hidden bg-[#ECE4D8] ring-1 ring-[#D8CCBA]/80 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-md group-hover:ring-2 group-hover:ring-[#C4A468]">
+                <img
+                  src={category.image}
+                  alt={category.name}
+                  className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+              </div>
+
+              {/* Title */}
+              <h3 className="mt-3.5 font-display text-[13px] sm:text-[14px] lg:text-[15px] font-semibold tracking-wider text-[#163323] uppercase transition-colors group-hover:text-[#C4A468]">
+                {category.name}
+              </h3>
+
+              {/* Subtitle */}
+              <p className="mt-1 text-[11px] sm:text-[12px] text-[#635B50] leading-tight max-w-[130px] sm:max-w-[140px]">
+                {category.description || category.tagline}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+      </div>
+    </section>
+  );
 }

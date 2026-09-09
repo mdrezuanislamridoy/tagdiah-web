@@ -1,7 +1,7 @@
 import type { Review } from '../types';
 
 export const IMAGES = {
-  hero: "/7c6c0d51-a3c1-4b33-9403-02f6adf28475.jpg",
+  hero: "/hero-curtains-living.jpg",
   promo: "/7d80354e-51bd-4697-9b63-60dd6e9e3800.jpg",
 
   inspoLiving: "/61989b94-2241-4d50-a511-97e9d0da28a9.jpg",
@@ -50,42 +50,42 @@ export const inspirationScenes: InspirationScene[] = [
 
 
 export const instagramPosts = [
-{ id: 'ig-1', image: IMAGES.insta1, caption: 'Shelf styling, Sunday edition', likes: 1284 },
-{ id: 'ig-2', image: IMAGES.insta2, caption: 'Tassel detail on the Sahil porda', likes: 962 },
-{ id: 'ig-3', image: IMAGES.inspoLiving, caption: 'Nusrat’s corner in Gulshan', likes: 2140 },
-{ id: 'ig-4', image: IMAGES.wallDecor, caption: 'Layering the Chhaya panel', likes: 1571 },
-{ id: 'ig-5', image: IMAGES.accessories, caption: 'New stoneware, still warm', likes: 1103 },
-{ id: 'ig-6', image: IMAGES.inspoEntry, caption: 'Entryways deserve better', likes: 1836 }];
-
+  { id: 'ig-1', image: '/ad172792-7186-4679-a0f2-3988f7a8d81e.jpg', caption: 'Lush linen curtains in natural light', likes: 1284 },
+  { id: 'ig-2', image: '/hero-slide-bedding.jpg', caption: 'Cozy floral comforter bedroom styling', likes: 962 },
+  { id: 'ig-3', image: '/hero-slide-dining.jpg', caption: 'Table setting with linen runner and ceramics', likes: 2140 },
+  { id: 'ig-4', image: '/c76ac6fa-625d-47b6-bb62-2c0d2003facc.jpg', caption: 'Warm dining nook with sheer curtains', likes: 1571 },
+  { id: 'ig-5', image: '/489a76f1-c1e9-4ed6-a767-054dec61c3f5.jpg', caption: 'Ceramic vase with yellow wildflower florals', likes: 1103 },
+  { id: 'ig-6', image: '/5937fc08-fa5f-4560-98f0-5ff780d8dee4.jpg', caption: 'Curtains styling in sunlit salon', likes: 1836 },
+  { id: 'ig-7', image: '/61989b94-2241-4d50-a511-97e9d0da28a9.jpg', caption: 'Cozy living room textures and plants', likes: 1420 },
+  { id: 'ig-8', image: '/e328ea71-c32d-43d8-b74c-8f8e3029133b.jpg', caption: 'Relaxing bed styling with cushions', likes: 1650 },
+];
 
 export const testimonials = [
-{
-  id: 't-1',
-  quote:
-  'The macramé panel arrived rolled in cloth, not plastic — that told me everything. It has completely changed the wall behind our sofa.',
-  author: 'Farhana Rahman',
-  location: 'Dhanmondi, Dhaka',
-  rating: 5,
-  product: 'Aranya Macramé Wall Hanging'
-},
-{
-  id: 't-2',
-  quote:
-  'I ordered two porda panels for our bedroom doorway. The linen is heavier than I expected in the best way, and the colour is exactly as photographed.',
-  author: 'Imtiaz Chowdhury',
-  location: 'Chattogram',
-  rating: 5,
-  product: 'Sahil Linen Door Porda'
-},
-{
-  id: 't-3',
-  quote:
-  'Customer care helped me measure my doorway over WhatsApp before I ordered the made-to-order set. It fits perfectly.',
-  author: 'Sadia Karim',
-  location: 'Sylhet',
-  rating: 4,
-  product: 'Naqsh Embroidered Porda'
-}];
+  {
+    id: 't-1',
+    quote:
+      'The quality is just amazing! The curtain looks even more beautiful in real. Highly recommended.',
+    author: 'Farhana Islam',
+    avatar: '/avatar-1.jpg',
+    rating: 5,
+  },
+  {
+    id: 't-2',
+    quote:
+      'I ordered bed sheet and cushion covers. Fabrics quality is excellent and color is so elegant.',
+    author: 'Nusrat Jahan',
+    avatar: '/avatar-2.jpg',
+    rating: 5,
+  },
+  {
+    id: 't-3',
+    quote:
+      'Very good service and fast delivery. Packaging was also premium.',
+    author: 'Sadiya Rahman',
+    avatar: '/avatar-3.jpg',
+    rating: 5,
+  },
+];
 
 
 export const productReviews: Record<string, Review[]> = {
