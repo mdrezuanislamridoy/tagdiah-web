@@ -225,8 +225,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             story: p.story || 'Handcrafted by generational artisans with natural materials.',
             popularity: p.popularity || 90,
             createdAt: p.createdAt || new Date().toISOString(),
-            bestSeller: p.badge === 'Bestseller',
-            newArrival: p.badge === 'New Arrival',
+            bestSeller: !!p.bestSeller || p.badge === 'Best Seller' || p.badge === 'Bestseller',
+            newArrival: !!p.newArrival || p.badge === 'New Arrival',
           };
         });
         setProducts(mappedProducts);

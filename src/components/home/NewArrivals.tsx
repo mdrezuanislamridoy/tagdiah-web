@@ -8,9 +8,9 @@ export function NewArrivals() {
   const { products: storeProducts, toggleWishlist, isWishlisted } = useStore();
   const allProducts = storeProducts && storeProducts.length > 0 ? storeProducts : defaultProducts;
 
-  // Get the 5 exact new arrivals
+  // Get the 5 exact new arrivals from live database
   const arrivals = allProducts
-    .filter((p) => p.newArrival || p.id.startsWith('na-'))
+    .filter((p) => p.newArrival || p.id.startsWith('na-') || p.badge === 'New Arrival')
     .slice(0, 5);
 
   return (
