@@ -9,9 +9,9 @@ export function BestSellers() {
   const { products: storeProducts, addToCart, toggleWishlist, isWishlisted } = useStore();
   const allProducts = storeProducts && storeProducts.length > 0 ? storeProducts : defaultProducts;
 
-  // Get the 5 exact best seller items
+  // Get the 5 exact best seller items from live database
   const bestSellers = allProducts
-    .filter((p) => p.bestSeller || p.id.startsWith('bs-'))
+    .filter((p) => p.bestSeller || p.id.startsWith('bs-') || p.badge === 'Best Seller' || p.badge === 'Bestseller')
     .slice(0, 5);
 
   return (
@@ -99,7 +99,14 @@ export function BestSellers() {
                 {/* Add To Cart Button */}
                 <button
                   type="button"
-                  onClick={() => addToCart(product, 1)}
+                  onClick={() =>
+                    addToCart({
+                      productId: product.id,
+                      quantity: 1,
+                      color: product.colors?.[0] || 'Default',
+                      size: product.sizes?.[0],
+                    })
+                  }
                   className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-[3px] bg-[#123826] py-2 sm:py-2.5 text-[11px] sm:text-xs font-semibold tracking-wider text-white uppercase transition-colors hover:bg-[#0c261a] active:scale-[0.98]"
                 >
                   <ShoppingBag className="h-3.5 w-3.5" strokeWidth={2} />
